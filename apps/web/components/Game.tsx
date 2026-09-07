@@ -45,7 +45,7 @@ function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart:
           <span className="tag">Johannesburg Edition · hot seat · turn {state.turnNumber}</span>
           <ViewSwitch view={view} onChange={setView} />
         </div>
-        {view === '2d' ? <Board state={state} log={log} /> : <Board3D state={state} />}
+        {view === '2d' ? <Board state={state} log={log} /> : <Board3D state={state} focusPlayerId={waitingOn} />}
       </div>
 
       <aside className="rail">

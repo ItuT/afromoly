@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls, Text, useGLTF } from '@react-three/drei';
 import type { Group, Object3D, PerspectiveCamera } from 'three';
@@ -13,41 +13,53 @@ const LABEL_FONT = '/fonts/BarlowSemiCondensed-SemiBold.ttf';
 
 /* ------------------------------------------------------------------ camera */
 
+export type Focus = 'board' | 'piece';
+
 /**
- * Keep the whole board in view whatever shape the canvas is.
+ * Point the camera at the whole board, or swoop in on one piece.
  *
- * A phone held upright is the case that matters: the width is the limit, not
- * the height, so the camera has to pull back a long way further than it does
- * on a laptop. The pitch also steepens on a portrait canvas, because a more
- * top-down view wastes less of the narrow width on perspective.
+ * A phone held upright is the case that matters for the overview: the width
+ * is the limit, not the height, so the camera has to pull back a long way
+ * further than it does on a laptop, and a steeper pitch wastes less of the
+ * narrow width on perspective. Following a piece is how a phone gets detail.
  */
-function FitCamera() {
+function FitCamera({ focus, target }: { focus: Focus; target: [number, number, number] }) {
   const { camera, size, controls } = useThree();
   const lastClass = useRef<'portrait' | 'landscape' | null>(null);
+  const lastFocus = useRef<Focus | null>(null);
 
   useEffect(() => {
     const cam = camera as PerspectiveCamera;
+    const orbit = controls as { target: { set: (x: number, y: number, z: number) => void }; update?: () => void } | null;
     const aspect = size.width / Math.max(size.height, 1);
-    const vfov = (cam.fov * Math.PI) / 180;
-    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-
-    // Half extents the board needs, with a little air around the rim.
-    const needVertical = 11 / Math.tan(vfov / 2);
-    const needHorizontal = 11.5 / Math.tan(hfov / 2);
-    const distance = Math.max(needVertical, needHorizontal);
-
     const klass = aspect < 1 ? 'portrait' : 'landscape';
+    const refit = lastClass.current !== klass || lastFocus.current !== focus;
+
+    let distance: number;
     let direction = cam.position.clone();
-    if (lastClass.current !== klass || direction.lengthSq() === 0) {
-      direction.set(0, 1, klass === 'portrait' ? 0.7 : 1);
-      lastClass.current = klass;
+    if (focus === 'piece') {
+      distance = 7.5;
+      if (refit) direction.set(0, 1, 0.9);
+      orbit?.target.set(target[0], target[1], target[2]);
+      direction = direction.normalize().multiplyScalar(distance);
+      cam.position.set(target[0] + direction.x, target[1] + direction.y, target[2] + direction.z);
+      cam.lookAt(target[0], target[1], target[2]);
+    } else {
+      const vfov = (cam.fov * Math.PI) / 180;
+      const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+      // Half extents the board needs, with a little air around the rim.
+      distance = Math.max(10.4 / Math.tan(vfov / 2), 10.8 / Math.tan(hfov / 2));
+      if (refit || direction.lengthSq() === 0) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
+      orbit?.target.set(0, 0, 0);
+      direction = direction.normalize().multiplyScalar(distance);
+      cam.position.copy(direction);
+      cam.lookAt(0, 0, 0);
     }
-    direction = direction.normalize().multiplyScalar(distance);
-    cam.position.copy(direction);
-    cam.lookAt(0, 0, 0);
+    lastClass.current = klass;
+    lastFocus.current = focus;
     cam.updateProjectionMatrix();
-    (controls as { update?: () => void } | null)?.update?.();
-  }, [camera, controls, size.width, size.height]);
+    orbit?.update?.();
+  }, [camera, controls, size.width, size.height, focus, target[0], target[1], target[2]]);
 
   return null;
 }
@@ -97,31 +109,38 @@ function TurnMarker({ position }: { position: [number, number, number] }) {
   return (
     <group ref={ring} position={[position[0], position[1] + 0.02, position[2]]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.62, 0.74, 24]} />
+        <ringGeometry args={[0.74, 0.88, 28]} />
         <meshBasicMaterial color="#e0913d" transparent opacity={0.85} />
       </mesh>
     </group>
   );
 }
 
-function Pieces({ state }: { state: ObservableState }) {
-  const active = state.players.filter((p) => !p.bankrupt);
-  const perTile = new Map<number, typeof active>();
-  for (const player of active) {
+type Seated = ObservableState['players'];
+
+function groupByTile(state: ObservableState): Map<number, Seated> {
+  const perTile = new Map<number, Seated>();
+  for (const player of state.players) {
+    if (player.bankrupt) continue;
     const list = perTile.get(player.position) ?? [];
     list.push(player);
     perTile.set(player.position, list);
   }
+  return perTile;
+}
 
+/** Where a given player's piece stands, or null if they are out. */
+function spotOf(state: ObservableState, playerId: string | null): [number, number, number] | null {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || player.bankrupt) return null;
+  const here = groupByTile(state).get(player.position) ?? [];
+  return tokenSpot(player.position, here.indexOf(player), here.length);
+}
+
+function Pieces({ state }: { state: ObservableState }) {
+  const perTile = groupByTile(state);
   const current = state.players[state.currentPlayerIndex];
-  const currentSpot =
-    current && !current.bankrupt
-      ? tokenSpot(
-          current.position,
-          (perTile.get(current.position) ?? []).indexOf(current),
-          (perTile.get(current.position) ?? []).length,
-        )
-      : null;
+  const currentSpot = current ? spotOf(state, current.id) : null;
 
   return (
     <>
@@ -135,7 +154,7 @@ function Pieces({ state }: { state: ObservableState }) {
               url={url}
               position={tokenSpot(tileIndex, slot, here.length)}
               rotationY={tileFootprint(tileIndex).facing}
-              scale={0.62}
+              scale={0.8}
               tint={SEAT_HEX[seat % SEAT_HEX.length]}
             />
           );
@@ -152,12 +171,12 @@ function Pieces({ state }: { state: ObservableState }) {
         if (ts.depot) {
           const [spot] = buildingSpots(tile.index, 1);
           return spot ? (
-            <Model key={`depot-${tile.index}`} url={MODEL_PATHS.depot} position={spot} rotationY={facing} scale={0.36} />
+            <Model key={`depot-${tile.index}`} url={MODEL_PATHS.depot} position={spot} rotationY={facing} scale={0.42} />
           ) : null;
         }
         if (ts.vans === 0) return null;
         return buildingSpots(tile.index, ts.vans).map((spot, i) => (
-          <Model key={`van-${tile.index}-${i}`} url={MODEL_PATHS.van} position={spot} rotationY={facing} scale={0.3} />
+          <Model key={`van-${tile.index}-${i}`} url={MODEL_PATHS.van} position={spot} rotationY={facing} scale={0.34} />
         ));
       })}
     </>
@@ -188,28 +207,28 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
     <group position={[f.x, TILE_TOP + 0.012, f.z]} rotation={[0, facing - Math.PI, 0]}>
       <Text
         font={LABEL_FONT}
-        fontSize={corner ? 0.3 : 0.2}
-        maxWidth={corner ? 2.2 : 1.42}
-        lineHeight={1.02}
+        fontSize={corner ? 0.34 : 0.25}
+        maxWidth={corner ? 2.3 : 1.46}
+        lineHeight={1.0}
         textAlign="center"
         anchorX="center"
         anchorY="middle"
-        color={ownerColour ?? '#ece5d6'}
+        color={ownerColour ?? '#f6f1e6'}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, corner ? 0 : 0.42]}
+        position={[0, 0, corner ? 0 : 0.4]}
       >
         {corner ? shortName(tile).toUpperCase() : shortName(tile)}
       </Text>
       {!corner && price && (
         <Text
           font={LABEL_FONT}
-          fontSize={0.15}
+          fontSize={0.17}
           textAlign="center"
           anchorX="center"
           anchorY="middle"
-          color="#9a917f"
+          color="#bdb3a0"
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0, 1.0]}
+          position={[0, 0, 1.03]}
         >
           {price}
         </Text>
@@ -249,7 +268,18 @@ function Scene({ state }: { state: ObservableState }) {
   );
 }
 
-export function Board3D({ state }: { state: ObservableState }) {
+export function Board3D({
+  state,
+  focusPlayerId,
+}: {
+  state: ObservableState;
+  /** Whose piece "My token" swoops to. Hot seat passes whoever is on the clock. */
+  focusPlayerId: string | null;
+}) {
+  const [focus, setFocus] = useState<Focus>('board');
+  const spot = spotOf(state, focusPlayerId) ?? [0, 0, 0];
+  const focusName = state.players.find((p) => p.id === focusPlayerId)?.name ?? 'token';
+
   return (
     <div className="board3d">
       <Canvas shadows={false} dpr={[1, 2]} camera={{ position: [0, 25, 25], fov: 34 }} gl={{ antialias: true }}>
@@ -284,8 +314,14 @@ export function Board3D({ state }: { state: ObservableState }) {
           maxPolarAngle={Math.PI / 2.35}
           target={[0, 0, 0]}
         />
-        <FitCamera />
+        <FitCamera focus={focus} target={spot} />
       </Canvas>
+      <div className="board3d-controls" role="group" aria-label="Camera">
+        <button aria-pressed={focus === 'board'} onClick={() => setFocus('board')}>Whole board</button>
+        <button aria-pressed={focus === 'piece'} onClick={() => setFocus('piece')} disabled={!focusPlayerId}>
+          {focusName}&rsquo;s token
+        </button>
+      </div>
       <div className="board3d-hint faint">Drag to orbit, pinch or scroll to zoom.</div>
     </div>
   );

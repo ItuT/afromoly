@@ -42,8 +42,10 @@ def reset_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def material(name, colour, *, metallic=0.0, roughness=0.6):
-    key = (name, colour, metallic, roughness)
+def material(name, colour, *, metallic=0.0, roughness=0.6, glow=0.0):
+    """A Principled material. `glow` adds self-illumination in the base colour,
+    which keeps the corridor bands saturated however the scene is lit."""
+    key = (name, colour, metallic, roughness, glow)
     if key in _materials:
         return _materials[key]
     mat = bpy.data.materials.new(name)
@@ -53,6 +55,9 @@ def material(name, colour, *, metallic=0.0, roughness=0.6):
         bsdf.inputs["Base Color"].default_value = (*colour, 1.0)
         bsdf.inputs["Metallic"].default_value = metallic
         bsdf.inputs["Roughness"].default_value = roughness
+        if glow > 0:
+            bsdf.inputs["Emission Color"].default_value = (*colour, 1.0)
+            bsdf.inputs["Emission Strength"].default_value = glow
     _materials[key] = mat
     return mat
 
@@ -158,11 +163,11 @@ def build_board():
     base = material("BoardBase", P.BOARD_BASE, roughness=0.85)
     face = material("TileFace", P.TILE_FACE, roughness=0.8)
     corner_face = material("CornerFace", P.CORNER_FACE, roughness=0.8)
-    hub = material("HubBand", P.HUB, roughness=0.5)
-    utility = material("UtilityBand", P.UTILITY, roughness=0.5)
-    rim = material("BoardRim", P.OCHRE, metallic=0.2, roughness=0.45)
+    hub = material("HubBand", P.HUB, roughness=0.5, glow=0.45)
+    utility = material("UtilityBand", P.UTILITY, roughness=0.5, glow=0.45)
+    rim = material("BoardRim", P.OCHRE, metallic=0.2, roughness=0.45, glow=0.12)
     group_mats = {
-        key: material(f"Group_{key}", colour, roughness=0.5)
+        key: material(f"Group_{key}", colour, roughness=0.5, glow=0.45)
         for key, colour in P.GROUPS.items()
     }
 
