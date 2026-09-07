@@ -3,8 +3,11 @@
 import { useEffect, useRef } from 'react';
 import type { LogLine } from '@/lib/useGame';
 
-/** The narrated log, for the 3D view where the board has no centre well. */
-export function LogPanel({ log }: { log: LogLine[] }) {
+/**
+ * The narrated log as a rail panel: for the 3D view, which has no centre well,
+ * and for phones, where the flat board is too small to hold it.
+ */
+export function LogPanel({ log, className }: { log: LogLine[]; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const lastId = log.at(-1)?.id ?? 0;
   useEffect(() => {
@@ -13,7 +16,7 @@ export function LogPanel({ log }: { log: LogLine[] }) {
   }, [lastId]);
 
   return (
-    <div className="panel">
+    <div className={`panel${className ? ` ${className}` : ''}`}>
       <h2>At the rank</h2>
       <div className="log" ref={ref} style={{ maxHeight: 260 }}>
         {log.slice(-60).map((line) => (

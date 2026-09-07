@@ -346,3 +346,45 @@ input:focus, select:focus, button:focus-visible {
   color: var(--ochre);
   background: var(--surface-2);
 }
+
+/* ------------------------------------------------------------ phones -- */
+
+/*
+ * Below this width the flat board fits the screen instead of scrolling
+ * sideways. Names get small, but the board stays a readable map of colours,
+ * owners and tokens, and the log moves into the rail beneath it.
+ */
+@media (max-width: 720px) {
+  .shell { padding: 12px; gap: 12px; }
+  .rail { position: static; }
+  .masthead { flex-wrap: wrap; gap: 6px 12px; padding-bottom: 8px; }
+  .masthead .tag { font-size: 10px; }
+
+  .board { min-width: 0; width: 100%; gap: 1px; border-width: 1px; }
+  .tile { padding: 2px 3px; gap: 1px; }
+  .tile .band { height: 4px; margin: -1px -1px 1px; }
+  .tile .name { font-size: 6.5px; line-height: 1.1; }
+  .tile .price { font-size: 6px; }
+  .tile .corner-label { font-size: 6.5px; letter-spacing: 0; }
+  .tile .van { width: 4px; height: 4px; }
+  .tile .depot { width: 10px; height: 5px; }
+  .tile .dev { gap: 1px; }
+  .token { width: 9px; height: 9px; font-size: 6px; }
+  .tokens { gap: 1px; }
+  .owner-dot { width: 5px; height: 5px; top: 2px; right: 2px; }
+
+  .board-centre { padding: 8px; gap: 4px; }
+  .board-centre .log { display: none; }
+  .wordmark { font-size: 16px; }
+  .wordmark small { font-size: 8px; letter-spacing: 0.12em; }
+
+  .board3d {
+    height: min(calc(100vh - 118px), calc(100vw * 1.15));
+    min-height: 320px;
+  }
+}
+
+/* The rail log is only needed when the board cannot hold it. */
+@media (min-width: 721px) {
+  .only-narrow { display: none; }
+}

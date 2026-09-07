@@ -95,7 +95,7 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
               : table.state.players.find((p) => p.id === table.waitingOn)?.name ?? null
           }
         />
-        {view === '3d' && <LogPanel log={table.log} />}
+        <LogPanel log={table.log} className={view === '2d' ? 'only-narrow' : undefined} />
         <Holdings state={table.state} playerId={seat.playerId} />
         <div className="panel">
           <h2>Table</h2>

@@ -57,7 +57,7 @@ function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart:
           dispatch={dispatch}
           restart={onRestart}
         />
-        {view === '3d' && <LogPanel log={log} />}
+        <LogPanel log={log} className={view === '2d' ? 'only-narrow' : undefined} />
         <Holdings state={state} playerId={waitingOn} />
         <div className="panel">
           <h2>Table</h2>
