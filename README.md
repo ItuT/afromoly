@@ -21,7 +21,7 @@ build plan, including every rule contradiction found in it and how each was reso
 | 2 | Next.js interface, 2D board, hot-seat in the browser | **done** |
 | 3 | Lambda, DynamoDB and WebSocket multiplayer | **done** |
 | 4 | Blender assets and the 3D board | **done** |
-| 5 | Deploy to afromoly.motebo.co.za | not started |
+| 5 | Deploy to afromoly.motebo.co.za | **written and diffed, awaiting approval to deploy** |
 
 ## Layout
 
@@ -188,5 +188,19 @@ pnpm --filter @afromoly/engine test:watch
 
 ## Deployment
 
-Phase 5. Everything will be reproducible with `cdk deploy` against `af-south-1`, fronted by
-CloudFront on `afromoly.motebo.co.za`. Nothing is deployed yet and no billable resource exists.
+Two CDK stacks in `af-south-1`, described in [infra/README.md](infra/README.md).
+
+```bash
+pnpm build                                  # the site stack deploys apps/web/out
+pnpm --filter @afromoly/infra diff          # read-only
+pnpm --filter @afromoly/infra deploy
+```
+
+The diff stands at 49 new resources and nothing removed or replaced. No
+certificate is issued, because the existing `*.motebo.co.za` wildcard already
+covers the domain. The only DNS change is creating the A and AAAA records for
+`afromoly.motebo.co.za`.
+
+**Nothing is deployed yet and no billable resource exists.** The client fetches
+`/config.json` at boot for its API addresses, so one build works against any
+environment, including a local server.

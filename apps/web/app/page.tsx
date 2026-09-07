@@ -5,13 +5,14 @@ import { TOKENS, TOKEN_NAMES, type PlayerSetup } from '@afromoly/engine';
 import { Game } from '@/components/Game';
 import { Online } from '@/components/Online';
 import { hostTable, joinTable, type Seat } from '@/lib/api';
-import { ONLINE_ENABLED } from '@/lib/config';
+import { useRuntimeConfig } from '@/lib/useConfig';
 
 const DEFAULT_NAMES = ['Thabo', 'Naledi', 'Sipho', 'Zanele', 'Kagiso', 'Lerato'];
 
 type Mode = 'menu' | 'hotseat-setup' | 'hotseat' | 'online';
 
 export default function Home() {
+  const { config, ready, online } = useRuntimeConfig();
   const [mode, setMode] = useState<Mode>('menu');
   const [seatCount, setSeatCount] = useState(3);
   const [names, setNames] = useState<string[]>(DEFAULT_NAMES);
@@ -140,10 +141,11 @@ export default function Home() {
 
       <div className="panel">
         <h2>Own screens</h2>
-        {!ONLINE_ENABLED ? (
+        {!ready ? (
+          <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>Checking for a rank…</p>
+        ) : !online ? (
           <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>
-            Online play is not configured for this build. Set the API and WebSocket addresses at
-            build time to enable it.
+            Online play is not configured for this deployment. Hot seat still works.
           </p>
         ) : (
           <>
@@ -161,7 +163,7 @@ export default function Home() {
               <button
                 className="primary"
                 disabled={busy}
-                onClick={() => void run(() => hostTable(myName, jackpot))}
+                onClick={() => void run(() => hostTable(config, myName, jackpot))}
               >
                 Host a table
               </button>
@@ -180,7 +182,7 @@ export default function Home() {
                 />
                 <button
                   disabled={busy || code.trim().length < 4}
-                  onClick={() => void run(() => joinTable(code, myName))}
+                  onClick={() => void run(() => joinTable(config, code, myName))}
                 >
                   Join
                 </button>

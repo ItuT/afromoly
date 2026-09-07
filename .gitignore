@@ -16,3 +16,4 @@ assets/blender/previews/*.png
 !assets/blender/previews/contact.png
 __pycache__/
 *.pyc
+infra/cdk.out/

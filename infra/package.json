@@ -1,0 +1,24 @@
+{
+  "name": "@afromoly/infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --all"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.268.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "aws-cdk": "^2.1133.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3",
+    "tsx": "^4.20.6"
+  },
+  "type": "module"
+}

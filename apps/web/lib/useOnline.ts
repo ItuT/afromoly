@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { legalActions, type Action, type ObservableState } from '@afromoly/engine';
 import { PROTOCOL_VERSION, type LobbyPlayer, type ServerMessage } from '@afromoly/protocol';
-import { WS_URL } from './config';
 import { toLines, waitingSeat, type LogLine } from './useGame';
 import type { Seat } from './api';
 
@@ -56,7 +55,7 @@ export function useOnline(seat: Seat): Online {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const open = () => {
-      const url = `${WS_URL}?gameId=${encodeURIComponent(seat.gameId)}&playerId=${encodeURIComponent(seat.playerId)}`;
+      const url = `${seat.wsUrl}?gameId=${encodeURIComponent(seat.gameId)}&playerId=${encodeURIComponent(seat.playerId)}`;
       const ws = new WebSocket(url);
       socket.current = ws;
       setConnection('connecting');
@@ -131,7 +130,7 @@ export function useOnline(seat: Seat): Online {
       socket.current?.close();
       socket.current = null;
     };
-  }, [seat.gameId, seat.playerId, append]);
+  }, [seat.gameId, seat.playerId, seat.wsUrl, append]);
 
   const post = useCallback((message: unknown) => {
     const ws = socket.current;
