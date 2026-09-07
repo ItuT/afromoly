@@ -7,18 +7,22 @@ on:
 
 jobs:
   check:
-    name: Lint, typecheck and engine tests
+    name: Lint, typecheck and engine tests (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20 is the Lambda runtime the API targets; 22 is what we develop on.
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm's version comes from packageManager in package.json.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: pnpm
 
       - name: Install dependencies
@@ -27,8 +31,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Build the engine
+        run: pnpm build
+
       - name: Typecheck
-        run: pnpm build && pnpm typecheck
+        run: pnpm typecheck
 
       - name: Engine tests
         run: pnpm test
