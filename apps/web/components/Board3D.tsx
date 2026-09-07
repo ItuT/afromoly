@@ -3,13 +3,14 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls, Text, useGLTF } from '@react-three/drei';
-import type { Group, Object3D, PerspectiveCamera } from 'three';
+import { Color, MeshBasicMaterial, NoToneMapping, type Group, type Object3D, type PerspectiveCamera } from 'three';
 import { BOARD, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
 import { MODEL_PATHS, TILE_TOP, buildingSpots, tileFootprint, tokenSpot } from '@/lib/board3d';
 import { rand, tileLabel } from '@/lib/display';
 
 const SEAT_HEX = ['#e0913d', '#5fa8bd', '#7fbe92', '#c9639b', '#d9b23c', '#b48ae0'];
-const LABEL_FONT = '/fonts/BarlowSemiCondensed-SemiBold.ttf';
+const LABEL_FONT = '/fonts/BarlowSemiCondensed-Bold.ttf';
+const OUTLINE = '#15130d';
 
 /* ------------------------------------------------------------------ camera */
 
@@ -207,13 +208,15 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
     <group position={[f.x, TILE_TOP + 0.012, f.z]} rotation={[0, facing - Math.PI, 0]}>
       <Text
         font={LABEL_FONT}
-        fontSize={corner ? 0.34 : 0.25}
-        maxWidth={corner ? 2.3 : 1.46}
+        fontSize={corner ? 0.36 : 0.27}
+        maxWidth={corner ? 2.3 : 1.5}
         lineHeight={1.0}
         textAlign="center"
         anchorX="center"
         anchorY="middle"
-        color={ownerColour ?? '#f6f1e6'}
+        color={ownerColour ?? '#ffffff'}
+        outlineWidth={0.022}
+        outlineColor={OUTLINE}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, corner ? 0 : 0.4]}
       >
@@ -222,13 +225,15 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
       {!corner && price && (
         <Text
           font={LABEL_FONT}
-          fontSize={0.17}
+          fontSize={0.19}
           textAlign="center"
           anchorX="center"
           anchorY="middle"
-          color="#bdb3a0"
+          color="#f1e9d8"
+          outlineWidth={0.016}
+          outlineColor={OUTLINE}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0, 1.03]}
+          position={[0, 0, 1.04]}
         >
           {price}
         </Text>
@@ -257,11 +262,115 @@ function Labels({ state }: { state: ObservableState }) {
 
 /* ------------------------------------------------------------------- scene */
 
-function Scene({ state }: { state: ObservableState }) {
-  const { scene } = useGLTF(MODEL_PATHS.board);
+/** A flat, unlit label in the centre well. */
+function WellText({
+  children,
+  position,
+  size,
+  color,
+  opacity = 1,
+  rotationY = 0,
+}: {
+  children: string;
+  position: [number, number, number];
+  size: number;
+  color: string;
+  opacity?: number;
+  rotationY?: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <Text
+        font={LABEL_FONT}
+        fontSize={size}
+        color={color}
+        fillOpacity={opacity}
+        anchorX="center"
+        anchorY="middle"
+        textAlign="center"
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        {children}
+      </Text>
+    </group>
+  );
+}
+
+/** A marked zone in the well where a deck sits. */
+function DeckZone({
+  title,
+  position,
+  rotationY,
+}: {
+  title: string;
+  position: [number, number, number];
+  rotationY: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]}>
+        <planeGeometry args={[3.5, 2.3]} />
+        <meshBasicMaterial color="#5f4320" toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+        <planeGeometry args={[3.3, 2.1]} />
+        <meshBasicMaterial color="#1e1b15" toneMapped={false} />
+      </mesh>
+      <WellText position={[0, 0.06, 0]} size={0.34} color="#e0913d">{title}</WellText>
+    </group>
+  );
+}
+
+/**
+ * The centre well: a watermark, the two deck zones, and the rank pot, so the
+ * middle of the board is a place rather than a hole.
+ */
+function Well({ state }: { state: ObservableState }) {
+  const pot = state.options.jackpot ? `RANK POT  ${rand(state.pot)}` : 'AFROMOLY';
   return (
     <>
-      <primitive object={scene} />
+      <WellText position={[0, 0.05, -1.4]} size={1.7} color="#e0913d" opacity={0.12}>AFROMOLY</WellText>
+      <WellText position={[0, 0.05, -0.1]} size={0.42} color="#e0913d" opacity={0.18}>JOHANNESBURG EDITION</WellText>
+      <WellText position={[0, 0.05, 1.0]} size={0.5} color="#f4ead8">{pot}</WellText>
+      <DeckZone title="KOMBI HUSTLE" position={[-3.6, 0, 3.4]} rotationY={0.55} />
+      <DeckZone title="CITY WATCH" position={[3.6, 0, -3.7]} rotationY={0.55} />
+    </>
+  );
+}
+
+/**
+ * The corridor bands come out of the lit pipeline looking pastel, so their
+ * materials are replaced with unlit, more saturated versions at load time.
+ */
+function useVividBoard() {
+  const { scene } = useGLTF(MODEL_PATHS.board);
+  return useMemo(() => {
+    const replaced = new Map<string, MeshBasicMaterial>();
+    scene.traverse((child: Object3D) => {
+      const mesh = child as Object3D & { material?: { name?: string; color?: Color } };
+      const name = mesh.material?.name ?? '';
+      const isBand = name.startsWith('Group_') || name === 'HubBand' || name === 'UtilityBand';
+      if (!isBand || !mesh.material?.color) return;
+      let material = replaced.get(name);
+      if (!material) {
+        const hsl = { h: 0, s: 0, l: 0 };
+        mesh.material.color.getHSL(hsl);
+        const color = new Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.35), Math.min(0.62, hsl.l * 1.15));
+        material = new MeshBasicMaterial({ color, toneMapped: false });
+        replaced.set(name, material);
+      }
+      (mesh as unknown as { material: MeshBasicMaterial }).material = material;
+    });
+    return scene;
+  }, [scene]);
+}
+
+function Scene({ state }: { state: ObservableState }) {
+  const board = useVividBoard();
+  return (
+    <>
+      <primitive object={board} />
+      <Well state={state} />
       <Labels state={state} />
       <Pieces state={state} />
     </>
@@ -282,11 +391,17 @@ export function Board3D({
 
   return (
     <div className="board3d">
-      <Canvas shadows={false} dpr={[1, 2]} camera={{ position: [0, 25, 25], fov: 34 }} gl={{ antialias: true }}>
+      <Canvas
+        shadows={false}
+        dpr={[1, 2]}
+        camera={{ position: [0, 25, 25], fov: 34 }}
+        // Filmic tone mapping was flattening the pads and greying the bands.
+        gl={{ antialias: true, toneMapping: NoToneMapping }}
+      >
         <color attach="background" args={['#12110d']} />
-        <hemisphereLight intensity={0.45} color="#f0e6d2" groundColor="#1a1710" />
-        <directionalLight position={[14, 24, 10]} intensity={1.15} />
-        <directionalLight position={[-16, 12, -8]} intensity={0.35} color="#9ec9d8" />
+        <hemisphereLight intensity={0.55} color="#f4ecdc" groundColor="#1a1710" />
+        <directionalLight position={[14, 24, 10]} intensity={1.4} />
+        <directionalLight position={[-16, 12, -8]} intensity={0.45} color="#9ec9d8" />
         {/* A table under the board, so it does not float in the void. */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.56, 0]}>
           <planeGeometry args={[400, 400]} />
@@ -299,7 +414,7 @@ export function Board3D({
             presets fetch an HDR from GitHub at runtime, which makes the whole
             board depend on a third party being up. This one is rendered locally.
           */}
-          <Environment resolution={64} environmentIntensity={0.28}>
+          <Environment resolution={64} environmentIntensity={0.35}>
             <Lightformer intensity={2.2} rotation-x={Math.PI / 2} position={[0, 6, 0]} scale={[14, 14, 1]} color="#f4ead8" />
             <Lightformer intensity={1.2} position={[-7, 3, -6]} scale={[6, 6, 1]} color="#9ec9d8" />
             <Lightformer intensity={1.6} position={[7, 2, 5]} scale={[6, 6, 1]} color="#f0d2a8" />
@@ -322,7 +437,7 @@ export function Board3D({
           {focusName}&rsquo;s token
         </button>
       </div>
-      <div className="board3d-hint faint">Drag to orbit, pinch or scroll to zoom.</div>
+      <div className="board3d-hint">Drag to orbit, pinch or scroll to zoom.</div>
     </div>
   );
 }

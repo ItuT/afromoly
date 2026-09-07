@@ -30,7 +30,7 @@ export function Seats({ state, waitingOn }: { state: ObservableState; waitingOn:
             </span>
             <span className="cash">
               {rand(player.cash)}
-              <span className="faint" style={{ display: 'block', fontSize: 10, textAlign: 'right' }}>
+              <span className="muted" style={{ display: 'block', fontSize: 10.5, textAlign: 'right' }}>
                 worth {rand(netWorth(state, player.id))}
               </span>
             </span>
