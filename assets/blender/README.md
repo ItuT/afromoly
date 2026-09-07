@@ -46,6 +46,7 @@ are ignored by git.
 | `prop-coins.glb` | The rank pot on the Taxi Rank Queue |
 | `prop-gantry.glb` | An e-toll gantry, cameras and all |
 | `die.glb` | One die with inset pips; the client tumbles two of them |
+| `diorama.glb` | The city around the board: Ponte, the Hillbrow Tower, mine dumps, the Mandela Bridge, Orlando Towers, a taxi rank, and jacarandas along the ring road. Built by `diorama.py` |
 
 The ranks carry a small `quantum-van.glb` rather than a prop of their own.
 

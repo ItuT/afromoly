@@ -23,6 +23,7 @@ import bpy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geometry as G  # noqa: E402
 import palette as P  # noqa: E402
+import diorama as D  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -646,6 +647,29 @@ def build_die():
 
 
 # --------------------------------------------------------------------------- #
+# The city around the board                                                   #
+# --------------------------------------------------------------------------- #
+
+class _Helpers:
+    """What diorama.py needs from this module, handed over as one object."""
+    bpy = bpy
+    material = staticmethod(material)
+    box = staticmethod(box)
+    cylinder = staticmethod(cylinder)
+    cone = staticmethod(cone)
+    sphere = staticmethod(sphere)
+    shade_smooth = staticmethod(shade_smooth)
+    shade_smooth_sides = staticmethod(shade_smooth_sides)
+    minibus = staticmethod(minibus)
+
+
+def build_diorama():
+    reset_scene()
+    D.build(_Helpers)
+    return "diorama"
+
+
+# --------------------------------------------------------------------------- #
 # Entry point                                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -667,6 +691,7 @@ BUILDERS = [
     build_prop_coins,
     build_prop_gantry,
     build_die,
+    build_diorama,
 ]
 
 

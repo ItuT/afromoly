@@ -64,23 +64,44 @@ export type Focus = 'board' | 'piece';
  * tracks the piece as it is drawn, so it walks with it rather than jumping to
  * where it will end up.
  */
+/** Which way is "outside the board" for a piece on this tile, as a unit vector. */
+function outwardOf(tileIndex: number): Vector3 {
+  const t = tileFootprint(tileIndex);
+  const corner = tileIndex === 0 || tileIndex === 10 || tileIndex === 20 || tileIndex === 30;
+  const facing = corner ? (t.z > 0 ? Math.PI : 0) : t.facing;
+  const theta = facing - Math.PI;
+  // Rotate +z, the bottom row's outward, into this side's frame.
+  return new Vector3(Math.sin(theta), 0, Math.cos(theta));
+}
+
 function FitCamera({
   focus,
   fallback,
   live,
   playerId,
+  tileIndex,
+  userOrbited,
 }: {
   focus: Focus;
   /** Where the followed piece stands according to the state. */
   fallback: [number, number, number];
   live: React.RefObject<LivePositions>;
   playerId: string | null;
+  /** The tile the followed piece stands on, so the camera approaches from its side. */
+  tileIndex: number | null;
+  /** Set by the orbit controls when the user drags, so their angle is kept. */
+  userOrbited: React.RefObject<boolean>;
 }) {
   const { camera, size, controls } = useThree();
   const lastClass = useRef<'portrait' | 'landscape' | null>(null);
   const lastFocus = useRef<Focus | null>(null);
+  const lastSide = useRef<string | null>(null);
   const goal = useRef<{ position: Vector3; target: Vector3; settled: boolean } | null>(null);
   const resetDirection = useRef(false);
+  // The direction the follow camera is heading for. Held here rather than
+  // read back from the camera each frame, because mid-journey the camera is
+  // still wherever it came from, and a re-aim would last exactly one frame.
+  const aim = useRef(new Vector3(0, 0.72, 1).normalize());
 
   useEffect(() => {
     const cam = camera as PerspectiveCamera;
@@ -97,7 +118,10 @@ function FitCamera({
     }
     const vfov = (cam.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const distance = Math.max(10.4 / Math.tan(vfov / 2), 10.8 / Math.tan(hfov / 2));
+    // A laptop has room to show a ring of city around the board; a phone
+    // spends every pixel on the board itself.
+    const air = klass === 'portrait' ? 1 : 1.22;
+    const distance = Math.max((10.4 * air) / Math.tan(vfov / 2), (10.8 * air) / Math.tan(hfov / 2));
     let direction = cam.position.clone();
     if (refit || direction.lengthSq() < 1e-6) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
     direction = direction.normalize().multiplyScalar(distance);
@@ -110,16 +134,24 @@ function FitCamera({
 
     if (focus === 'piece') {
       const here = (playerId && live.current.get(playerId)) || new Vector3(...fallback);
-      let direction: Vector3;
-      if (resetDirection.current || !orbit) {
-        direction = new Vector3(0, 1, 0.9).normalize();
-        resetDirection.current = false;
-      } else {
-        direction = camera.position.clone().sub(orbit.target);
-        if (direction.lengthSq() < 1e-6) direction.set(0, 1, 0.9);
-        direction.normalize();
+      // Lean in from outside the piece's own side of the board, so the names
+      // on that side read upright. Re-aim when the piece changes side.
+      const outward = tileIndex === null ? new Vector3(0, 0, 1) : outwardOf(tileIndex);
+      const side = `${Math.round(outward.x)},${Math.round(outward.z)}`;
+      if (lastSide.current !== side) {
+        lastSide.current = side;
+        resetDirection.current = true;
       }
-      const wanted = here.clone().add(direction.multiplyScalar(7.5));
+      if (resetDirection.current || !orbit) {
+        aim.current = outward.clone().setY(0.72).normalize();
+        resetDirection.current = false;
+      } else if (userOrbited.current) {
+        // The user dragged: keep the angle they chose, but never from below.
+        const chosen = camera.position.clone().sub(orbit.target);
+        if (chosen.lengthSq() > 1e-6) aim.current = chosen.normalize().setY(Math.max(0.25, chosen.y)).normalize();
+        userOrbited.current = false;
+      }
+      const wanted = here.clone().add(aim.current.clone().multiplyScalar(8.2));
       camera.position.lerp(wanted, k);
       if (orbit) orbit.target.lerp(here, k);
       else camera.lookAt(here);
@@ -568,6 +600,43 @@ function Labels({ state }: { state: ObservableState }) {
   );
 }
 
+/* --------------------------------------------------------------- ownership */
+
+/**
+ * A bought property carries its owner's colour along the outer edge of the
+ * pad, opposite the corridor band, and a faint wash over the whole pad.
+ * Mortgaged deeds go grey, so a glance shows what is earning and what is not.
+ */
+function Ownership({ state }: { state: ObservableState }) {
+  return (
+    <>
+      {BOARD.map((tile) => {
+        const ts = state.tiles[tile.index];
+        if (!ts?.ownerId) return null;
+        const seat = state.players.findIndex((p) => p.id === ts.ownerId);
+        const colour = ts.mortgaged ? '#8b8578' : SEAT_HEX[seat % SEAT_HEX.length] ?? '#e0913d';
+        const f = tileFootprint(tile.index);
+        const across = Math.min(f.width, f.depth) - 0.1;
+        const [x, , z] = onTile(tile.index, 0, f.depth / 2 - 0.1);
+        const centre = onTile(tile.index, 0, 0);
+        const rotation = (tileFootprint(tile.index).facing - Math.PI) as number;
+        return (
+          <group key={`own-${tile.index}`}>
+            <mesh position={[x, TILE_TOP + 0.009, z]} rotation={[-Math.PI / 2, 0, -rotation]}>
+              <planeGeometry args={[across, 0.16]} />
+              <meshBasicMaterial color={colour} toneMapped={false} />
+            </mesh>
+            <mesh position={[centre[0], TILE_TOP + 0.006, centre[2]]} rotation={[-Math.PI / 2, 0, -rotation]}>
+              <planeGeometry args={[across, Math.max(f.width, f.depth) - 0.1]} />
+              <meshBasicMaterial color={colour} transparent opacity={ts.mortgaged ? 0.08 : 0.13} toneMapped={false} />
+            </mesh>
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 /* ------------------------------------------------------------------- props */
 
 interface PropSpec {
@@ -747,6 +816,11 @@ function useVividBoard() {
   }, [scene]);
 }
 
+function City() {
+  const { scene } = useGLTF(MODEL_PATHS.diorama);
+  return <primitive object={scene} />;
+}
+
 function Scene({
   state,
   events,
@@ -762,6 +836,8 @@ function Scene({
   return (
     <>
       <primitive object={board} />
+      <City />
+      <Ownership state={state} />
       <Well state={state} />
       <Props />
       <Labels state={state} />
@@ -785,12 +861,15 @@ export function Board3D({
   focusPlayerId: string | null;
 }) {
   const live = useRef<LivePositions>(new Map());
+  const userOrbited = useRef(false);
   // A phone cannot make forty tiles legible at once, so it opens on the piece.
   const [focus, setFocus] = useState<Focus>(() =>
     typeof window !== 'undefined' && window.innerWidth < 720 ? 'piece' : 'board',
   );
   const spot = spotOf(state, focusPlayerId) ?? [0, 0, 0];
-  const focusName = state.players.find((p) => p.id === focusPlayerId)?.name ?? 'token';
+  const focusPlayer = state.players.find((p) => p.id === focusPlayerId);
+  const focusName = focusPlayer?.name ?? 'token';
+  const focusTile = focusPlayer && !focusPlayer.bankrupt ? focusPlayer.position : null;
 
   return (
     <div className="board3d">
@@ -802,11 +881,12 @@ export function Board3D({
         gl={{ antialias: true, toneMapping: NoToneMapping }}
       >
         <color attach="background" args={['#12110d']} />
+        <fog attach="fog" args={['#12110d', 42, 95]} />
         <hemisphereLight intensity={0.55} color="#f4ecdc" groundColor="#1a1710" />
         <directionalLight position={[14, 24, 10]} intensity={1.4} />
         <directionalLight position={[-16, 12, -8]} intensity={0.45} color="#9ec9d8" />
-        {/* A table under the board, so it does not float in the void. */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.56, 0]}>
+        {/* The ground beyond the city's edge, so nothing floats in the void. */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.7, 0]}>
           <planeGeometry args={[400, 400]} />
           <meshStandardMaterial color="#0e0d0a" roughness={1} />
         </mesh>
@@ -825,14 +905,24 @@ export function Board3D({
         </Suspense>
         <OrbitControls
           makeDefault
+          onStart={() => {
+            userOrbited.current = true;
+          }}
           enablePan={false}
-          minDistance={12}
+          minDistance={6}
           maxDistance={90}
           minPolarAngle={0.15}
           maxPolarAngle={Math.PI / 2.35}
           target={[0, 0, 0]}
         />
-        <FitCamera focus={focus} fallback={spot} live={live} playerId={focusPlayerId} />
+        <FitCamera
+          focus={focus}
+          fallback={spot}
+          live={live}
+          playerId={focusPlayerId}
+          tileIndex={focusTile}
+          userOrbited={userOrbited}
+        />
       </Canvas>
       <div className="board3d-controls" role="group" aria-label="Camera">
         <button aria-pressed={focus === 'board'} onClick={() => setFocus('board')}>Whole board</button>

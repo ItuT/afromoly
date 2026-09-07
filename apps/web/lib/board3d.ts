@@ -112,6 +112,7 @@ export const MODEL_PATHS = {
   propCoins: '/models/prop-coins.glb',
   propGantry: '/models/prop-gantry.glb',
   die: '/models/die.glb',
+  diorama: '/models/diorama.glb',
 } as const;
 
 /**

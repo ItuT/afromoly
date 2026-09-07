@@ -18,7 +18,7 @@ NAMES = [
     "board", "quantum-van", "terminal-depot", "token-quantum", "token-coin",
     "token-robot", "token-vest", "token-megaphone", "token-sneaker",
     "prop-robot", "prop-bulb", "prop-tap", "prop-cards-kombi",
-    "prop-cards-citywatch", "prop-coins", "prop-gantry", "die",
+    "prop-cards-citywatch", "prop-coins", "prop-gantry", "die", "diorama",
 ]
 
 
