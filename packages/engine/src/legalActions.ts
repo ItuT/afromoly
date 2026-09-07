@@ -19,9 +19,9 @@ import {
   tileState,
   vansOwned,
 } from './selectors.js';
-import type { GameState, PlayerId } from './types.js';
+import type { ObservableState, PlayerId } from './types.js';
 
-export function legalActions(state: GameState, playerId: PlayerId): Action[] {
+export function legalActions(state: ObservableState, playerId: PlayerId): Action[] {
   const player = playerById(state, playerId);
   if (!player || player.bankrupt || state.phase === 'gameOver') return [];
   const out: Action[] = [];
@@ -92,7 +92,7 @@ export function legalActions(state: GameState, playerId: PlayerId): Action[] {
   return out;
 }
 
-function liquidationActions(state: GameState, playerId: PlayerId): Action[] {
+function liquidationActions(state: ObservableState, playerId: PlayerId): Action[] {
   const out: Action[] = [];
   for (const index of ownedTiles(state, playerId)) {
     const tile = tileAt(index);
@@ -106,7 +106,7 @@ function liquidationActions(state: GameState, playerId: PlayerId): Action[] {
   return out;
 }
 
-function managementActions(state: GameState, playerId: PlayerId): Action[] {
+function managementActions(state: ObservableState, playerId: PlayerId): Action[] {
   const player = playerById(state, playerId);
   if (!player) return [];
   const out: Action[] = [...liquidationActions(state, playerId)];

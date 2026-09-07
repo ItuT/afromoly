@@ -1,18 +1,23 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { BOARD, tileAt, type Action, type GameState, type TradeOffer } from '@afromoly/engine';
+import { BOARD, tileAt, type Action, type ObservableState, type TradeOffer } from '@afromoly/engine';
 import { rand } from '@/lib/display';
 
 interface Props {
-  state: GameState;
+  state: ObservableState;
   waitingOn: string;
   legal: Action[];
   dispatch: (action: Action) => void;
   restart: () => void;
+  /**
+   * Online only: the name of whoever the table is waiting on when it is not
+   * this player. Hot seat leaves it undefined, because every seat is here.
+   */
+  waitingLabel?: string | null;
 }
 
-function promptFor(state: GameState, waitingOn: string): { title: string; detail: string } {
+function promptFor(state: ObservableState, waitingOn: string): { title: string; detail: string } {
   const name = state.players.find((p) => p.id === waitingOn)?.name ?? '';
   switch (state.phase) {
     case 'awaitingRoll': {
@@ -62,7 +67,7 @@ function promptFor(state: GameState, waitingOn: string): { title: string; detail
   }
 }
 
-export function Actions({ state, waitingOn, legal, dispatch, restart }: Props) {
+export function Actions({ state, waitingOn, legal, dispatch, restart, waitingLabel }: Props) {
   const prompt = promptFor(state, waitingOn);
   const has = (kind: Action['kind']) => legal.some((a) => a.kind === kind);
   const auction = state.auction;
@@ -94,6 +99,18 @@ export function Actions({ state, waitingOn, legal, dispatch, restart }: Props) {
         <div className="prompt"><strong>{prompt.title}</strong>{prompt.detail}</div>
         <div className="actions" style={{ marginTop: 12 }}>
           <button className="primary" onClick={restart}>Play again</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (waitingLabel) {
+    return (
+      <div className="panel">
+        <h2>Your move</h2>
+        <div className="prompt">
+          <strong>Waiting on {waitingLabel}</strong>
+          Nothing for you to do until they finish.
         </div>
       </div>
     );
@@ -251,7 +268,7 @@ function TradeBuilder({
   fromId,
   onPropose,
 }: {
-  state: GameState;
+  state: ObservableState;
   fromId: string;
   onPropose: (offer: TradeOffer) => void;
 }) {

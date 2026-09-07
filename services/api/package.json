@@ -1,0 +1,29 @@
+{
+  "name": "@afromoly/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "tsx src/local.ts"
+  },
+  "dependencies": {
+    "@afromoly/engine": "workspace:*",
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.1127.0",
+    "@aws-sdk/client-dynamodb": "^3.1127.0",
+    "@aws-sdk/lib-dynamodb": "^3.1127.0",
+    "@afromoly/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.163",
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "ws": "^8.18.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.20.6"
+  }
+}

@@ -14,8 +14,8 @@ resolved, lives in [PLAN.md](PLAN.md).
 | Phase | What it delivers | State |
 | --- | --- | --- |
 | 1 | Rules engine, tests, terminal hot-seat | **done** |
-| 2 | Next.js interface, 2D board, hot-seat in the browser | not started |
-| 3 | Lambda, DynamoDB and WebSocket multiplayer | not started |
+| 2 | Next.js interface, 2D board, hot-seat in the browser | **done** |
+| 3 | Lambda, DynamoDB and WebSocket multiplayer | **done** |
 | 4 | Blender assets and the 3D board | not started |
 | 5 | Deploy to afromoly.motebo.co.za | not started |
 
@@ -23,9 +23,10 @@ resolved, lives in [PLAN.md](PLAN.md).
 
 ```
 packages/engine    pure TypeScript rules engine, no I/O
+packages/protocol  the browser-to-server message shapes, no AWS code
 apps/cli           terminal hot-seat runner
-apps/web           Next.js client (phase 2)
-services/api       Lambda handlers (phase 3)
+apps/web           Next.js client, hot seat and online
+services/api       Lambda handlers, DynamoDB store, local dev server
 infra              AWS CDK stacks (phase 5)
 assets/blender     .blend sources and the glTF export script (phase 4)
 ```
@@ -58,6 +59,28 @@ pnpm --filter @afromoly/cli start -- --players=3 --seed=noord
 Type `help` for the command list. The board draws as an 11 by 11 grid: the top line of each
 cell is the tile, the line under it is the tile number, the owner's seat number, a development
 marker (`1` to `4` vans, `D` for a depot, `m` for mortgaged) and any tokens standing there.
+
+## Playing online, locally
+
+Multiplayer runs against a local server that speaks the same protocol as the
+deployed Lambdas and keeps everything in memory, so no AWS account is needed to
+develop or play it.
+
+```bash
+pnpm --filter @afromoly/api dev      # the rank, on :4000
+```
+
+Then, in another terminal:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:4000 \
+NEXT_PUBLIC_WS_URL=ws://localhost:4000 \
+pnpm --filter @afromoly/web dev
+```
+
+Open the app, host a table, and read the six-character code out to whoever is
+joining. Without those two variables the client still runs and offers hot-seat
+play, and says plainly that online is not configured.
 
 ## The engine
 
@@ -103,14 +126,35 @@ Two smaller readings the Readme does not cover, both flagged here rather than bu
 - **Auctioning the last van or depot** when the bank runs short is not implemented. The engine
   refuses the purchase instead, which is the mechanically important half of the rule.
 
+## The server
+
+`services/api` is server-authoritative. Clients send intents; the engine runs
+on the server and the result is broadcast. Three things make that safe:
+
+- **The state a client receives is redacted.** The shuffled deck order and the
+  generator state never leave the server, so nobody can read the next card or
+  predict a roll. Everything else in Monopoly is public and is sent as is.
+- **Every write is conditional** on the game's version, so two moves that race
+  cannot both land. The loser is told to resync and is handed the current state.
+- **Every intent carries a nonce**, so a retried send after a dropped socket
+  replays as the move it already made rather than applying twice.
+
+Seats, connections, the game and its action log all live in one DynamoDB table
+with a TTL, keyed as described in [PLAN.md](PLAN.md#4-dynamodb-key-design).
+
 ## Testing
 
-115 tests cover the engine. Every cell of the Readme's rent table is asserted against an
+141 tests: 115 over the engine and 26 over the server. Every cell of the Readme's rent table is asserted against an
 independently transcribed fixture, so a typo in the board data fails rather than agreeing with
 itself. Beyond that: both bankruptcy routes, all three impound exits, the even-build rule in
 both directions, mortgage interest on lifting and on transfer, auctions, the jackpot pot, and
 all thirty-two cards. A soak test plays complete games from fixed seeds and checks invariants
 after every action, and a determinism test asserts that the same seed replays byte for byte.
+
+The server suite runs the whole path, from creating a table through joining,
+starting, playing and disconnecting, against an in-memory store. It covers
+redaction, the optimistic lock, nonce replay, acting out of turn, and acting on
+another player's behalf.
 
 ```bash
 pnpm test

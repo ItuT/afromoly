@@ -1,9 +1,9 @@
 'use client';
 
-import { netWorth, tileAt, type GameState } from '@afromoly/engine';
+import { netWorth, tileAt, type ObservableState } from '@afromoly/engine';
 import { rand, seatColour } from '@/lib/display';
 
-export function Seats({ state, waitingOn }: { state: GameState; waitingOn: string }) {
+export function Seats({ state, waitingOn }: { state: ObservableState; waitingOn: string }) {
   return (
     <div className="panel">
       <h2>Operators</h2>

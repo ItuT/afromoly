@@ -1,4 +1,4 @@
-import { tileAt, type ColorGroup, type GameState, type Tile } from '@afromoly/engine';
+import { tileAt, type ColorGroup, type ObservableState, type Tile } from '@afromoly/engine';
 
 export const GROUP_COLOUR: Record<ColorGroup, string> = {
   brown: 'var(--brown)',
@@ -38,7 +38,7 @@ export function tileLabel(tile: Tile): string {
   }
 }
 
-export function seatIndexOf(state: GameState, playerId: string | null): number {
+export function seatIndexOf(state: ObservableState, playerId: string | null): number {
   if (!playerId) return -1;
   return state.players.findIndex((p) => p.id === playerId);
 }

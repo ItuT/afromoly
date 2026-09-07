@@ -7,7 +7,7 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   output: 'export',
   reactStrictMode: true,
-  transpilePackages: ['@afromoly/engine'],
+  transpilePackages: ['@afromoly/engine', '@afromoly/protocol'],
   images: { unoptimized: true },
   // Next writes AGENTS.md and CLAUDE.md on build; this repo documents itself.
   agentRules: false,

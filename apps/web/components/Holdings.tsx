@@ -1,9 +1,9 @@
 'use client';
 
-import { BOARD, GROUP_NAMES, type GameState } from '@afromoly/engine';
+import { BOARD, GROUP_NAMES, type ObservableState } from '@afromoly/engine';
 import { GROUP_COLOUR, rand } from '@/lib/display';
 
-export function Holdings({ state, playerId }: { state: GameState; playerId: string }) {
+export function Holdings({ state, playerId }: { state: ObservableState; playerId: string }) {
   const owned = BOARD.filter((tile) => state.tiles[tile.index]?.ownerId === playerId);
   const player = state.players.find((p) => p.id === playerId);
 

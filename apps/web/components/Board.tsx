@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { BOARD, type GameState, type Tile } from '@afromoly/engine';
+import { BOARD, type ObservableState, type Tile } from '@afromoly/engine';
 import { GROUP_COLOUR, gridPosition, rand, seatColour, tileLabel } from '@/lib/display';
 import type { LogLine } from '@/lib/useGame';
 
-function TileCell({ tile, state }: { tile: Tile; state: GameState }) {
+function TileCell({ tile, state }: { tile: Tile; state: ObservableState }) {
   const ts = state.tiles[tile.index];
   const ownerSeat = ts?.ownerId ? state.players.findIndex((p) => p.id === ts.ownerId) : -1;
   const isCorner = ['go', 'impound', 'freerest', 'gotoimpound'].includes(tile.kind);
@@ -52,7 +52,7 @@ function TileCell({ tile, state }: { tile: Tile; state: GameState }) {
   );
 }
 
-export function Board({ state, log }: { state: GameState; log: LogLine[] }) {
+export function Board({ state, log }: { state: ObservableState; log: LogLine[] }) {
   const logRef = useRef<HTMLDivElement>(null);
   const lastId = log.at(-1)?.id ?? 0;
 

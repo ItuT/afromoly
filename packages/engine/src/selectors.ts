@@ -10,36 +10,36 @@ import {
   streetsInGroup,
   tileAt,
 } from './board.js';
-import type { GameState, Player, PlayerId, StreetTile, TileIndex, TileState } from './types.js';
+import type { ObservableState, Player, PlayerId, StreetTile, TileIndex, TileState } from './types.js';
 
-export function playerById(state: GameState, id: PlayerId): Player | undefined {
+export function playerById(state: ObservableState, id: PlayerId): Player | undefined {
   return state.players.find((p) => p.id === id);
 }
 
-export function requirePlayer(state: GameState, id: PlayerId): Player {
+export function requirePlayer(state: ObservableState, id: PlayerId): Player {
   const p = playerById(state, id);
   if (!p) throw new Error(`Unknown player ${id}`);
   return p;
 }
 
-export function currentPlayer(state: GameState): Player {
+export function currentPlayer(state: ObservableState): Player {
   const p = state.players[state.currentPlayerIndex];
   if (!p) throw new Error('No current player');
   return p;
 }
 
-export function tileState(state: GameState, index: TileIndex): TileState {
+export function tileState(state: ObservableState, index: TileIndex): TileState {
   const ts = state.tiles[index];
   if (!ts) throw new Error(`No tile state at ${index}`);
   return ts;
 }
 
-export function activePlayers(state: GameState): Player[] {
+export function activePlayers(state: ObservableState): Player[] {
   return state.players.filter((p) => !p.bankrupt);
 }
 
 /** Tile indexes owned by a player, in board order. */
-export function ownedTiles(state: GameState, id: PlayerId): TileIndex[] {
+export function ownedTiles(state: ObservableState, id: PlayerId): TileIndex[] {
   const out: TileIndex[] = [];
   for (let i = 0; i < BOARD_SIZE; i++) {
     if (state.tiles[i]?.ownerId === id) out.push(i);
@@ -48,20 +48,20 @@ export function ownedTiles(state: GameState, id: PlayerId): TileIndex[] {
 }
 
 /** True when the player owns every street in the group. */
-export function ownsWholeGroup(state: GameState, id: PlayerId, group: StreetTile['group']): boolean {
+export function ownsWholeGroup(state: ObservableState, id: PlayerId, group: StreetTile['group']): boolean {
   const streets = streetsInGroup(group);
   return streets.every((s) => state.tiles[s.index]?.ownerId === id);
 }
 
-export function vansOwned(state: GameState): number {
+export function vansOwned(state: ObservableState): number {
   return state.tiles.reduce((n, t) => n + t.vans, 0);
 }
 
-export function depotsOwned(state: GameState): number {
+export function depotsOwned(state: ObservableState): number {
   return state.tiles.reduce((n, t) => n + (t.depot ? 1 : 0), 0);
 }
 
-export function buildingsFor(state: GameState, id: PlayerId): { vans: number; depots: number } {
+export function buildingsFor(state: ObservableState, id: PlayerId): { vans: number; depots: number } {
   let vans = 0;
   let depots = 0;
   for (const index of ownedTiles(state, id)) {
@@ -79,7 +79,7 @@ export function buildingsFor(state: GameState, id: PlayerId): { vans: number; de
  * `forceDouble` covers City Watch 5, which charges double rent on Sandton CBD.
  */
 export function rentFor(
-  state: GameState,
+  state: ObservableState,
   index: TileIndex,
   roll: number,
   forceDouble = false,
@@ -141,7 +141,7 @@ export function rentFor(
  * holdings, plus half value of mortgaged ones, plus the full purchase price of
  * every van and depot.
  */
-export function netWorth(state: GameState, id: PlayerId): number {
+export function netWorth(state: ObservableState, id: PlayerId): number {
   const player = requirePlayer(state, id);
   let total = player.cash;
   for (const index of ownedTiles(state, id)) {
@@ -162,7 +162,7 @@ export function netWorth(state: GameState, id: PlayerId): number {
  * and mortgaging every unimproved holding, on top of the cash they hold.
  * Used to decide whether a debt is survivable.
  */
-export function maxRaisable(state: GameState, id: PlayerId): number {
+export function maxRaisable(state: ObservableState, id: PlayerId): number {
   const player = requirePlayer(state, id);
   let total = player.cash;
   for (const index of ownedTiles(state, id)) {

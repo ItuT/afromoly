@@ -249,3 +249,13 @@ export interface PlayerSetup {
   name: string;
   token: TokenId;
 }
+
+/**
+ * The game as an observer may see it: everything except the shuffled deck
+ * order and the generator state, which would give away the next card and every
+ * future roll.
+ *
+ * Every read-only selector takes this rather than GameState, so it is a type
+ * error for a display path to reach for hidden information.
+ */
+export type ObservableState = Omit<GameState, 'rng' | 'decks'>;

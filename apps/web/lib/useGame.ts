@@ -11,6 +11,7 @@ import {
   type GameEvent,
   type GameOptions,
   type GameState,
+  type ObservableState,
   type PlayerSetup,
 } from '@afromoly/engine';
 
@@ -30,8 +31,18 @@ export interface HotSeat {
   dispatch: (action: Action) => void;
 }
 
-function toLines(state: GameState, events: GameEvent[], startId: number): LogLine[] {
-  const who = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
+/**
+ * Turn engine events into narration.
+ *
+ * Takes a name lookup rather than the state, so the online client can narrate
+ * events that arrive before the matching state does.
+ */
+export function toLines(
+  events: GameEvent[],
+  startId: number,
+  nameOf: (id: string) => string,
+): LogLine[] {
+  const who = nameOf;
   const at = (index: number) => tileAt(index).name;
   const out: LogLine[] = [];
   let id = startId;
@@ -89,7 +100,7 @@ function toLines(state: GameState, events: GameEvent[], startId: number): LogLin
 }
 
 /** Whichever seat the game is waiting on right now. */
-export function waitingSeat(state: GameState): string {
+export function waitingSeat(state: ObservableState): string {
   if (state.phase === 'auction' && state.auction) {
     return state.auction.activeIds[state.auction.turnIndex] ?? state.players[0]?.id ?? '';
   }
@@ -118,7 +129,8 @@ function makeShell(state: GameState, opening: string): Shell {
 
 function shellReducer(shell: Shell, action: Action): Shell {
   const result = reduce(shell.state, action);
-  const lines = toLines(result.state, result.events, shell.nextId);
+  const nameOf = (id: string) => result.state.players.find((p) => p.id === id)?.name ?? id;
+  const lines = toLines(result.events, shell.nextId, nameOf);
   return {
     state: result.state,
     log: [...shell.log, ...lines].slice(-300),
