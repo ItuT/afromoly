@@ -350,12 +350,15 @@ input:focus, select:focus, button:focus-visible {
 .board3d-controls button { font-size: 12px; padding: 5px 10px; background: rgba(27, 25, 19, 0.85); }
 .board3d-controls button[aria-pressed="true"] { border-color: var(--ochre); color: var(--ochre); }
 
-.view-switch { display: flex; gap: 4px; margin-left: auto; }
-.view-switch button {
+.view-switch, .sound-switch { display: flex; gap: 4px; }
+.view-switch { margin-left: auto; }
+.view-switch button,
+.sound-switch button {
   font-size: 12px;
   padding: 4px 11px;
 }
-.view-switch button[aria-pressed="true"] {
+.view-switch button[aria-pressed="true"],
+.sound-switch button[aria-pressed="true"] {
   border-color: var(--ochre);
   color: var(--ochre);
   background: var(--surface-2);

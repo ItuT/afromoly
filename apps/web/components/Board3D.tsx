@@ -16,6 +16,11 @@ import {
 } from 'three';
 import { BOARD, type GameEvent, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
 import {
+  DICE_LEAD,
+  HOP_HEIGHT,
+  HOP_SECONDS,
+  IMPOUND_HEIGHT,
+  IMPOUND_SECONDS,
   MODEL_PATHS,
   TILE_TOP,
   buildingSpots,
@@ -35,12 +40,6 @@ const INK = '#151310';
 const PAD = '#f4f1ea';
 const CORNER_PAD = '#ebe6da';
 const WELL = '#e3dccb';
-
-/** Seconds per tile when a piece walks, and how high it hops. */
-const HOP_SECONDS = 0.15;
-const HOP_HEIGHT = 0.42;
-/** How long the dice tumble before the pieces start to move. */
-const DICE_LEAD = 1.15;
 
 /** Positions of the pieces as drawn this frame, which lag the state while they move. */
 type LivePositions = Map<string, Vector3>;
@@ -315,7 +314,7 @@ function Pieces({
           })),
         );
       } else if (event.kind === 'sentToImpound') {
-        queue(event.playerId, [{ to: new Vector3(...tileCentre(10)), height: 1.8, seconds: 0.75 }]);
+        queue(event.playerId, [{ to: new Vector3(...tileCentre(10)), height: IMPOUND_HEIGHT, seconds: IMPOUND_SECONDS }]);
       }
     }
   }, [batch, events, reduced, clock]);

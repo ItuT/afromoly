@@ -35,6 +35,7 @@ apps/web           Next.js client, hot seat and online
 services/api       Lambda handlers, DynamoDB store, local dev server
 infra              AWS CDK stacks (phase 5)
 assets/blender     the model build script, its .blend outputs and the exporter
+assets/audio       the sound synthesis script and its exporter
 ```
 
 ## Getting started
@@ -148,6 +149,30 @@ That writes `.glb` files into `apps/web/public/models`. See
 [assets/blender/README.md](assets/blender/README.md) for what gets built and how
 the board's dimensions are kept in step between Blender and the client.
 
+## Sound
+
+Fourteen clips, none of them recorded: `assets/audio/build_sounds.py` synthesises
+each one from oscillators and noise, the same way the models are built from
+primitives. It needs nothing but Python.
+
+```bash
+cd assets/audio && ./export.sh
+```
+
+That writes `.wav` files into `apps/web/public/audio`. See
+[assets/audio/README.md](assets/audio/README.md) for what each one is.
+
+The client scores a batch of engine events rather than firing a noise per event.
+The dice clatter first, the piece ticks once per tile it crosses, and whatever
+the tile costs is heard once it has landed, which is the same schedule the 3D
+scene animates to — both read their timings from `apps/web/lib/board3d.ts`, so
+they cannot drift apart. Cues are scheduled on the audio clock, not with timers,
+so the rhythm holds while the board is busy drawing.
+
+Sound is on by default, off with the header switch, and the choice is
+remembered. Nothing loads or plays until the page has been touched, because
+browsers will not start audio before then.
+
 ## The server
 
 `services/api` is server-authoritative. Clients send intents; the engine runs
@@ -166,8 +191,8 @@ with a TTL, keyed as described in [PLAN.md](PLAN.md#4-dynamodb-key-design).
 
 ## Testing
 
-150 tests: 115 over the engine, 26 over the server, and 9 over the board's
-3D geometry. Every cell of the Readme's rent table is asserted against an
+159 tests: 115 over the engine, 26 over the server, and 18 over the client's
+board geometry and sound. Every cell of the Readme's rent table is asserted against an
 independently transcribed fixture, so a typo in the board data fails rather than agreeing with
 itself. Beyond that: both bankruptcy routes, all three impound exits, the even-build rule in
 both directions, mortgage interest on lifting and on transfer, auctions, the jackpot pot, and
@@ -179,9 +204,12 @@ starting, playing and disconnecting, against an in-memory store. It covers
 redaction, the optimistic lock, nonce replay, acting out of turn, and acting on
 another player's behalf.
 
-The geometry tests assert that no two tiles overlap, that every token and every
-van lands inside its own tile however many are sharing it, and that buildings sit
-on the inner half of a street rather than hanging off the outer edge.
+The client tests assert that no two tiles overlap, that every token and every van
+lands inside its own tile however many are sharing it, and that buildings sit on
+the inner half of a street rather than hanging off the outer edge. The sound
+tests check that every clip the client can ask for is a real file, and that a
+batch of events is scored in the order it happens: hops held until the dice have
+settled, rent heard only once the piece has landed.
 
 ```bash
 pnpm test

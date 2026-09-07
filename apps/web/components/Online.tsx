@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useOnline } from '@/lib/useOnline';
+import { useSounds } from '@/lib/useSounds';
 import type { Seat } from '@/lib/api';
 import { Board } from '@/components/Board';
 import { Board3D } from '@/components/Board3D';
 import { LogPanel } from '@/components/LogPanel';
 import { ViewSwitch, type BoardView } from '@/components/ViewSwitch';
+import { SoundSwitch } from '@/components/SoundSwitch';
 import { Seats } from '@/components/Seats';
 import { Holdings } from '@/components/Holdings';
 import { Actions } from '@/components/Actions';
@@ -16,6 +18,7 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
   const table = useOnline(seat);
   const [view, setView] = useState<BoardView>('2d');
   const isHost = table.hostId === seat.playerId;
+  useSounds(table.events, table.batch);
 
   if (!table.state) {
     return (
@@ -75,6 +78,7 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
             Table {table.code} · turn {table.state.turnNumber} · {table.connection}
           </span>
           <ViewSwitch view={view} onChange={setView} />
+          <SoundSwitch />
         </div>
         {view === '2d'
           ? <Board state={table.state} log={table.log} />

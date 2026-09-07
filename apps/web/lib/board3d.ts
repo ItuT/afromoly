@@ -13,6 +13,24 @@ export const EDGE_WIDTH = (2 * HALF - 2 * CORNER) / 9;
 export const DEPTH = CORNER;
 export const TILE_TOP = 0.06;
 
+/*
+ * How long the scene takes to act out an event.
+ *
+ * The 3D board animates to these numbers and the sound scheduler in
+ * lib/useSounds.ts scores to them, so a die lands on its knock and a piece
+ * ticks once per tile. They live here rather than in the scene so that the two
+ * cannot drift apart.
+ */
+
+/** Seconds per tile when a piece walks, and how high it hops. */
+export const HOP_SECONDS = 0.15;
+export const HOP_HEIGHT = 0.42;
+/** How long the dice tumble before the pieces start to move. */
+export const DICE_LEAD = 1.15;
+/** The single long hop of a piece being carted off to the impound lot. */
+export const IMPOUND_SECONDS = 0.75;
+export const IMPOUND_HEIGHT = 1.8;
+
 export interface TileFootprint {
   x: number;
   z: number;
