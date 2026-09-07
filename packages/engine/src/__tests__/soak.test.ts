@@ -38,26 +38,35 @@ function choose(state: GameState, actions: Action[]): Action | null {
   );
 }
 
-function checkInvariants(state: GameState): void {
-  expect(vansOwned(state)).toBeLessThanOrEqual(state.options.maxVans);
-  expect(depotsOwned(state)).toBeLessThanOrEqual(state.options.maxDepots);
-  expect(state.pot).toBeGreaterThanOrEqual(0);
+/**
+ * Collect violations with plain checks and assert once. Calling expect() after
+ * every action in a full game is what makes a soak test slow, not the engine.
+ */
+function invariantViolations(state: GameState): string[] {
+  const bad: string[] = [];
+  if (vansOwned(state) > state.options.maxVans) bad.push('too many vans in play');
+  if (depotsOwned(state) > state.options.maxDepots) bad.push('too many depots in play');
+  if (state.pot < 0) bad.push('negative rank pot');
   for (const player of state.players) {
-    expect(player.cash).toBeGreaterThanOrEqual(0);
-    expect(player.position).toBeGreaterThanOrEqual(0);
-    expect(player.position).toBeLessThan(40);
-    expect(player.impoundAttempts).toBeLessThanOrEqual(3);
+    if (player.cash < 0) bad.push(`${player.id} holds negative cash`);
+    if (player.position < 0 || player.position >= 40) bad.push(`${player.id} is off the board`);
+    if (player.impoundAttempts > 3) bad.push(`${player.id} has a fourth impound attempt`);
   }
   state.tiles.forEach((tile, index) => {
     if (tile.ownerId !== null) {
       const owner = state.players.find((p) => p.id === tile.ownerId);
-      expect(owner, `tile ${index} owned by a ghost`).toBeDefined();
-      expect(owner?.bankrupt, `tile ${index} owned by a bankrupt operator`).toBe(false);
-      expect(tileAt(index).kind).not.toBe('card');
+      if (!owner) bad.push(`tile ${index} is owned by a ghost`);
+      else if (owner.bankrupt) bad.push(`tile ${index} is owned by a bankrupt operator`);
+      if (tileAt(index).kind === 'card') bad.push(`tile ${index} is a card space and cannot be owned`);
     }
-    expect(tile.vans).toBeLessThanOrEqual(4);
-    if (tile.depot) expect(tile.vans).toBe(0);
+    if (tile.vans > 4) bad.push(`tile ${index} has more than four vans`);
+    if (tile.depot && tile.vans !== 0) bad.push(`tile ${index} has a depot and loose vans`);
   });
+  return bad;
+}
+
+function checkInvariants(state: GameState): void {
+  expect(invariantViolations(state)).toEqual([]);
 }
 
 interface Playout {
@@ -82,7 +91,8 @@ function playout(seed: string, playerCount: number, maxActions = 6_000): Playout
       break;
     }
     if (!acted) break;
-    checkInvariants(state);
+    const bad = invariantViolations(state);
+    if (bad.length > 0) throw new Error(`After step ${steps}: ${bad.join('; ')}`);
   }
   return { state, steps };
 }
@@ -90,6 +100,7 @@ function playout(seed: string, playerCount: number, maxActions = 6_000): Playout
 describe('full-game soak', () => {
   it.each(['rank-one', 'noord-two', 'gillooly-three'])(
     'plays a clean three-hander from seed %s',
+    { timeout: 60_000 },
     (seed) => {
       const { state, steps } = playout(seed, 3);
       expect(steps).toBeGreaterThan(200);
@@ -100,7 +111,7 @@ describe('full-game soak', () => {
     },
   );
 
-  it('seats six operators without breaking', () => {
+  it('seats six operators without breaking', { timeout: 60_000 }, () => {
     const six = [
       ...SETUP,
       { id: 'p4', name: 'Zanele', token: 'vest' as const },
@@ -121,14 +132,14 @@ describe('full-game soak', () => {
 });
 
 describe('determinism', () => {
-  it('replays identically from the same seed', () => {
+  it('replays identically from the same seed', { timeout: 60_000 }, () => {
     const a = playout('same-seed', 3, 900);
     const b = playout('same-seed', 3, 900);
     expect(a.steps).toBe(b.steps);
     expect(JSON.stringify(a.state)).toBe(JSON.stringify(b.state));
   });
 
-  it('diverges on a different seed', () => {
+  it('diverges on a different seed', { timeout: 60_000 }, () => {
     const a = playout('seed-alpha', 3, 400);
     const b = playout('seed-beta', 3, 400);
     expect(JSON.stringify(a.state)).not.toBe(JSON.stringify(b.state));
