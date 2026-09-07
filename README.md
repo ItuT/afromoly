@@ -13,6 +13,8 @@ build plan, including every rule contradiction found in it and how each was reso
 > The design document was originally called `Readme.md`. It was renamed because macOS filesystems
 > are case-insensitive, so `Readme.md` and this `README.md` are the same file and cannot coexist.
 
+**Playing now at [afromoly.motebo.co.za](https://afromoly.motebo.co.za).**
+
 ## Status
 
 | Phase | What it delivers | State |
@@ -21,7 +23,7 @@ build plan, including every rule contradiction found in it and how each was reso
 | 2 | Next.js interface, 2D board, hot-seat in the browser | **done** |
 | 3 | Lambda, DynamoDB and WebSocket multiplayer | **done** |
 | 4 | Blender assets and the 3D board | **done** |
-| 5 | Deploy to afromoly.motebo.co.za | **written and diffed, awaiting approval to deploy** |
+| 5 | Deploy to afromoly.motebo.co.za | **live** |
 
 ## Layout
 
@@ -201,6 +203,19 @@ certificate is issued, because the existing `*.motebo.co.za` wildcard already
 covers the domain. The only DNS change is creating the A and AAAA records for
 `afromoly.motebo.co.za`.
 
-**Nothing is deployed yet and no billable resource exists.** The client fetches
-`/config.json` at boot for its API addresses, so one build works against any
-environment, including a local server.
+The client fetches `/config.json` at boot for its API addresses, so one build
+works against any environment, including a local server.
+
+### What is live
+
+| | |
+| --- | --- |
+| Site | `https://afromoly.motebo.co.za` |
+| Lobby API | `https://79dy6ctg7f.execute-api.af-south-1.amazonaws.com` |
+| WebSocket | `wss://9qvyf9qiob.execute-api.af-south-1.amazonaws.com/live` |
+| Table | DynamoDB `afromoly` in `af-south-1` |
+
+Deployed in five and a half minutes, most of it CloudFront. Verified afterwards
+with two browsers on the live site: a table hosted and joined by code, fourteen
+turns played, both views agreeing on turn number and cash, the 3D board
+rendering, and no console errors.
