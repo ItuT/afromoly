@@ -222,7 +222,7 @@ function TurnMarker({ position }: { position: [number, number, number] }) {
     <group ref={ring} position={[position[0], position[1] + 0.02, position[2]]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.74, 0.88, 28]} />
-        <meshBasicMaterial color="#e0913d" transparent opacity={0.85} />
+        <meshBasicMaterial color="#e0913d" transparent opacity={0.85} fog={false} />
       </mesh>
     </group>
   );
@@ -624,11 +624,11 @@ function Ownership({ state }: { state: ObservableState }) {
           <group key={`own-${tile.index}`}>
             <mesh position={[x, TILE_TOP + 0.009, z]} rotation={[-Math.PI / 2, 0, -rotation]}>
               <planeGeometry args={[across, 0.16]} />
-              <meshBasicMaterial color={colour} toneMapped={false} />
+              <meshBasicMaterial color={colour} toneMapped={false} fog={false} />
             </mesh>
             <mesh position={[centre[0], TILE_TOP + 0.006, centre[2]]} rotation={[-Math.PI / 2, 0, -rotation]}>
               <planeGeometry args={[across, Math.max(f.width, f.depth) - 0.1]} />
-              <meshBasicMaterial color={colour} transparent opacity={ts.mortgaged ? 0.08 : 0.13} toneMapped={false} />
+              <meshBasicMaterial color={colour} transparent opacity={ts.mortgaged ? 0.08 : 0.13} toneMapped={false} fog={false} />
             </mesh>
           </group>
         );
@@ -743,11 +743,11 @@ function DeckZone({
     <group position={position} rotation={[0, rotationY, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]}>
         <planeGeometry args={[3.5, 2.3]} />
-        <meshBasicMaterial color="#5f4320" toneMapped={false} />
+        <meshBasicMaterial color="#5f4320" toneMapped={false} fog={false} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
         <planeGeometry args={[3.3, 2.1]} />
-        <meshBasicMaterial color="#1e1b15" toneMapped={false} />
+        <meshBasicMaterial color="#1e1b15" toneMapped={false} fog={false} />
       </mesh>
       <WellText position={[0, 0.06, 0]} size={0.34} color="#e0913d">{title}</WellText>
     </group>
@@ -801,16 +801,22 @@ function useVividBoard() {
           return new MeshBasicMaterial({
             color: new Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.4), Math.min(0.56, hsl.l * 1.1)),
             toneMapped: false,
+            fog: false,
           });
         });
       } else if (name === 'TileFace') {
-        material = unlit(name, () => new MeshBasicMaterial({ color: PAD, toneMapped: false }));
+        material = unlit(name, () => new MeshBasicMaterial({ color: PAD, toneMapped: false, fog: false }));
       } else if (name === 'CornerFace') {
-        material = unlit(name, () => new MeshBasicMaterial({ color: CORNER_PAD, toneMapped: false }));
+        material = unlit(name, () => new MeshBasicMaterial({ color: CORNER_PAD, toneMapped: false, fog: false }));
       } else if (child.name.startsWith('centre_well')) {
-        material = unlit('well', () => new MeshBasicMaterial({ color: WELL, toneMapped: false }));
+        material = unlit('well', () => new MeshBasicMaterial({ color: WELL, toneMapped: false, fog: false }));
       }
       if (material) (mesh as unknown as { material: MeshBasicMaterial }).material = material;
+      const applied = (mesh as unknown as { material: { fog?: boolean; needsUpdate?: boolean } }).material;
+      if (applied && applied.fog !== false) {
+        applied.fog = false;
+        applied.needsUpdate = true;
+      }
     });
     return scene;
   }, [scene]);
@@ -881,7 +887,13 @@ export function Board3D({
         gl={{ antialias: true, toneMapping: NoToneMapping }}
       >
         <color attach="background" args={['#12110d']} />
-        <fog attach="fog" args={['#12110d', 42, 95]} />
+        {/*
+          Fog softens the far edge of the city and nothing else. The orbit's
+          maximum distance is 90, and the farthest corner of the board from
+          there is about 105 away, so fog cannot start before that or zooming
+          out would fade the board itself, which is exactly what it did.
+        */}
+        <fog attach="fog" args={['#12110d', 110, 230]} />
         <hemisphereLight intensity={0.55} color="#f4ecdc" groundColor="#1a1710" />
         <directionalLight position={[14, 24, 10]} intensity={1.4} />
         <directionalLight position={[-16, 12, -8]} intensity={0.45} color="#9ec9d8" />
