@@ -3,64 +3,80 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls, Text, useGLTF } from '@react-three/drei';
-import { Color, MeshBasicMaterial, NoToneMapping, type Group, type Object3D, type PerspectiveCamera } from 'three';
+import { Color, MeshBasicMaterial, NoToneMapping, Vector3, type Group, type Object3D, type PerspectiveCamera } from 'three';
 import { BOARD, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
 import { MODEL_PATHS, TILE_TOP, buildingSpots, tileFootprint, tokenSpot } from '@/lib/board3d';
 import { rand, tileLabel } from '@/lib/display';
 
 const SEAT_HEX = ['#e0913d', '#5fa8bd', '#7fbe92', '#c9639b', '#d9b23c', '#b48ae0'];
+/** The same seats, deep enough to read as text on a cream pad. */
+const SEAT_INK = ['#a8540a', '#1f6f88', '#256b3f', '#a02f72', '#8a6a08', '#6a3fb5'];
 const LABEL_FONT = '/fonts/BarlowSemiCondensed-Bold.ttf';
-const OUTLINE = '#15130d';
+const INK = '#151310';
+const PAD = '#f4f1ea';
+const CORNER_PAD = '#ebe6da';
+const WELL = '#e3dccb';
 
 /* ------------------------------------------------------------------ camera */
 
 export type Focus = 'board' | 'piece';
 
 /**
- * Point the camera at the whole board, or swoop in on one piece.
+ * Point the camera at the whole board, or follow one piece, easing between
+ * the two rather than snapping.
  *
  * A phone held upright is the case that matters for the overview: the width
- * is the limit, not the height, so the camera has to pull back a long way
- * further than it does on a laptop, and a steeper pitch wastes less of the
- * narrow width on perspective. Following a piece is how a phone gets detail.
+ * is the limit, not the height, so the camera pulls back a long way further
+ * than on a laptop and takes a steeper pitch. Following a piece is how a phone
+ * gets detail, and it is the default there.
  */
 function FitCamera({ focus, target }: { focus: Focus; target: [number, number, number] }) {
   const { camera, size, controls } = useThree();
   const lastClass = useRef<'portrait' | 'landscape' | null>(null);
   const lastFocus = useRef<Focus | null>(null);
+  const goal = useRef<{ position: Vector3; target: Vector3; settled: boolean } | null>(null);
 
   useEffect(() => {
     const cam = camera as PerspectiveCamera;
-    const orbit = controls as { target: { set: (x: number, y: number, z: number) => void }; update?: () => void } | null;
     const aspect = size.width / Math.max(size.height, 1);
     const klass = aspect < 1 ? 'portrait' : 'landscape';
     const refit = lastClass.current !== klass || lastFocus.current !== focus;
+    const look = new Vector3(...(focus === 'piece' ? target : [0, 0, 0]));
 
     let distance: number;
-    let direction = cam.position.clone();
+    let direction = cam.position.clone().sub(look);
     if (focus === 'piece') {
       distance = 7.5;
       if (refit) direction.set(0, 1, 0.9);
-      orbit?.target.set(target[0], target[1], target[2]);
-      direction = direction.normalize().multiplyScalar(distance);
-      cam.position.set(target[0] + direction.x, target[1] + direction.y, target[2] + direction.z);
-      cam.lookAt(target[0], target[1], target[2]);
     } else {
       const vfov = (cam.fov * Math.PI) / 180;
       const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-      // Half extents the board needs, with a little air around the rim.
       distance = Math.max(10.4 / Math.tan(vfov / 2), 10.8 / Math.tan(hfov / 2));
-      if (refit || direction.lengthSq() === 0) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
-      orbit?.target.set(0, 0, 0);
-      direction = direction.normalize().multiplyScalar(distance);
-      cam.position.copy(direction);
-      cam.lookAt(0, 0, 0);
+      if (refit || direction.lengthSq() < 1e-6) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
     }
+    direction = direction.normalize().multiplyScalar(distance);
+
+    goal.current = { position: look.clone().add(direction), target: look, settled: false };
     lastClass.current = klass;
     lastFocus.current = focus;
-    cam.updateProjectionMatrix();
+  }, [camera, size.width, size.height, focus, target[0], target[1], target[2]]);
+
+  useFrame((_, delta) => {
+    const g = goal.current;
+    if (!g || g.settled) return;
+    const orbit = controls as { target: Vector3; update?: () => void } | null;
+    const k = 1 - Math.exp(-delta * 6);
+    camera.position.lerp(g.position, k);
+    if (orbit) orbit.target.lerp(g.target, k);
+    else camera.lookAt(g.target);
     orbit?.update?.();
-  }, [camera, controls, size.width, size.height, focus, target[0], target[1], target[2]]);
+    if (camera.position.distanceTo(g.position) < 0.02) {
+      camera.position.copy(g.position);
+      orbit?.target.copy(g.target);
+      orbit?.update?.();
+      g.settled = true;
+    }
+  });
 
   return null;
 }
@@ -214,9 +230,7 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
         textAlign="center"
         anchorX="center"
         anchorY="middle"
-        color={ownerColour ?? '#ffffff'}
-        outlineWidth={0.022}
-        outlineColor={OUTLINE}
+        color={ownerColour ?? INK}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, corner ? 0 : 0.4]}
       >
@@ -229,9 +243,7 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
           textAlign="center"
           anchorX="center"
           anchorY="middle"
-          color="#f1e9d8"
-          outlineWidth={0.016}
-          outlineColor={OUTLINE}
+          color="#5a5344"
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, 0, 1.04]}
         >
@@ -252,7 +264,7 @@ function Labels({ state }: { state: ObservableState }) {
           <TileLabel
             key={tile.index}
             tile={tile}
-            ownerColour={seat >= 0 ? SEAT_HEX[seat % SEAT_HEX.length] ?? null : null}
+            ownerColour={seat >= 0 ? SEAT_INK[seat % SEAT_INK.length] ?? null : null}
           />
         );
       })}
@@ -329,9 +341,9 @@ function Well({ state }: { state: ObservableState }) {
   const pot = state.options.jackpot ? `RANK POT  ${rand(state.pot)}` : 'AFROMOLY';
   return (
     <>
-      <WellText position={[0, 0.05, -1.4]} size={1.7} color="#e0913d" opacity={0.12}>AFROMOLY</WellText>
-      <WellText position={[0, 0.05, -0.1]} size={0.42} color="#e0913d" opacity={0.18}>JOHANNESBURG EDITION</WellText>
-      <WellText position={[0, 0.05, 1.0]} size={0.5} color="#f4ead8">{pot}</WellText>
+      <WellText position={[0, 0.05, -1.4]} size={1.7} color="#b4661a" opacity={0.28}>AFROMOLY</WellText>
+      <WellText position={[0, 0.05, -0.1]} size={0.42} color="#b4661a" opacity={0.45}>JOHANNESBURG EDITION</WellText>
+      <WellText position={[0, 0.05, 1.0]} size={0.5} color={INK}>{pot}</WellText>
       <DeckZone title="KOMBI HUSTLE" position={[-3.6, 0, 3.4]} rotationY={0.55} />
       <DeckZone title="CITY WATCH" position={[3.6, 0, -3.7]} rotationY={0.55} />
     </>
@@ -339,27 +351,45 @@ function Well({ state }: { state: ObservableState }) {
 }
 
 /**
- * The corridor bands come out of the lit pipeline looking pastel, so their
- * materials are replaced with unlit, more saturated versions at load time.
+ * The playing surface is unlit: cream pads, a slightly deeper cream well, and
+ * saturated corridor bands, none of which the lighting or the camera angle
+ * can dim. Only the base slab and the rim keep lit materials, for depth.
  */
 function useVividBoard() {
   const { scene } = useGLTF(MODEL_PATHS.board);
   return useMemo(() => {
     const replaced = new Map<string, MeshBasicMaterial>();
+    const unlit = (key: string, make: () => MeshBasicMaterial) => {
+      let material = replaced.get(key);
+      if (!material) {
+        material = make();
+        replaced.set(key, material);
+      }
+      return material;
+    };
     scene.traverse((child: Object3D) => {
       const mesh = child as Object3D & { material?: { name?: string; color?: Color } };
-      const name = mesh.material?.name ?? '';
-      const isBand = name.startsWith('Group_') || name === 'HubBand' || name === 'UtilityBand';
-      if (!isBand || !mesh.material?.color) return;
-      let material = replaced.get(name);
-      if (!material) {
-        const hsl = { h: 0, s: 0, l: 0 };
-        mesh.material.color.getHSL(hsl);
-        const color = new Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.35), Math.min(0.62, hsl.l * 1.15));
-        material = new MeshBasicMaterial({ color, toneMapped: false });
-        replaced.set(name, material);
+      if (!mesh.material?.color) return;
+      const name = mesh.material.name ?? '';
+      const source = mesh.material.color;
+      let material: MeshBasicMaterial | null = null;
+      if (name.startsWith('Group_') || name === 'HubBand' || name === 'UtilityBand') {
+        material = unlit(name, () => {
+          const hsl = { h: 0, s: 0, l: 0 };
+          source.getHSL(hsl);
+          return new MeshBasicMaterial({
+            color: new Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.4), Math.min(0.56, hsl.l * 1.1)),
+            toneMapped: false,
+          });
+        });
+      } else if (name === 'TileFace') {
+        material = unlit(name, () => new MeshBasicMaterial({ color: PAD, toneMapped: false }));
+      } else if (name === 'CornerFace') {
+        material = unlit(name, () => new MeshBasicMaterial({ color: CORNER_PAD, toneMapped: false }));
+      } else if (child.name.startsWith('centre_well')) {
+        material = unlit('well', () => new MeshBasicMaterial({ color: WELL, toneMapped: false }));
       }
-      (mesh as unknown as { material: MeshBasicMaterial }).material = material;
+      if (material) (mesh as unknown as { material: MeshBasicMaterial }).material = material;
     });
     return scene;
   }, [scene]);
@@ -385,7 +415,10 @@ export function Board3D({
   /** Whose piece "My token" swoops to. Hot seat passes whoever is on the clock. */
   focusPlayerId: string | null;
 }) {
-  const [focus, setFocus] = useState<Focus>('board');
+  // A phone cannot make forty tiles legible at once, so it opens on the piece.
+  const [focus, setFocus] = useState<Focus>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 720 ? 'piece' : 'board',
+  );
   const spot = spotOf(state, focusPlayerId) ?? [0, 0, 0];
   const focusName = state.players.find((p) => p.id === focusPlayerId)?.name ?? 'token';
 
