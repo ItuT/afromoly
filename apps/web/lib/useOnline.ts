@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { legalActions, type Action, type ObservableState } from '@afromoly/engine';
+import { legalActions, type Action, type GameEvent, type ObservableState } from '@afromoly/engine';
 import { PROTOCOL_VERSION, type LobbyPlayer, type ServerMessage } from '@afromoly/protocol';
 import { toLines, waitingSeat, type LogLine } from './useGame';
 import type { Seat } from './api';
@@ -16,6 +16,8 @@ export interface Online {
   state: ObservableState | null;
   version: number;
   log: LogLine[];
+  events: GameEvent[];
+  batch: number;
   legal: Action[];
   waitingOn: string;
   error: string | null;
@@ -35,6 +37,8 @@ export function useOnline(seat: Seat): Online {
     { id: 0, text: 'Connecting to the rank.', tone: 'head' },
   ]);
   const [error, setError] = useState<string | null>(null);
+  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [batch, setBatch] = useState(0);
 
   const socket = useRef<WebSocket | null>(null);
   const versionRef = useRef(0);
@@ -101,6 +105,8 @@ export function useOnline(seat: Seat): Online {
             );
             nextLogId.current += lines.length;
             append(lines);
+            setEvents(message.events);
+            setBatch((n) => n + 1);
             break;
           }
           case 'error':
@@ -177,6 +183,8 @@ export function useOnline(seat: Seat): Online {
     state,
     version,
     log,
+    events,
+    batch,
     legal,
     waitingOn,
     error,

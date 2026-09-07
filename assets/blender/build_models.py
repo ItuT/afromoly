@@ -590,6 +590,62 @@ def build_prop_gantry():
 
 
 # --------------------------------------------------------------------------- #
+# The die                                                                      #
+# --------------------------------------------------------------------------- #
+
+# Pip layouts on a face, as offsets across its two tangent axes.
+_O = 0.27
+PIPS = {
+    1: [(0, 0)],
+    2: [(-_O, -_O), (_O, _O)],
+    3: [(-_O, -_O), (0, 0), (_O, _O)],
+    4: [(-_O, -_O), (-_O, _O), (_O, -_O), (_O, _O)],
+    5: [(-_O, -_O), (-_O, _O), (0, 0), (_O, -_O), (_O, _O)],
+    6: [(-_O, -_O), (-_O, 0), (-_O, _O), (_O, -_O), (_O, 0), (_O, _O)],
+}
+
+# Which face carries which value. Opposite faces add to seven, as on a real
+# die. In glTF terms (Y up) this puts 1 on top, 6 underneath, 3 on +X, 4 on
+# -X, 2 on -Z and 5 on +Z, which is what the client's face rotations assume.
+DIE_FACES = {
+    (0, 0, 1): 1, (0, 0, -1): 6,
+    (1, 0, 0): 3, (-1, 0, 0): 4,
+    (0, 1, 0): 2, (0, -1, 0): 5,
+}
+
+
+def build_die():
+    """A single die, bevelled, with inset pips. The client shows two."""
+    reset_scene()
+    body_mat = material("DieBody", (0.96, 0.95, 0.91), roughness=0.35)
+    pip_mat = material("DiePip", (0.08, 0.07, 0.06), roughness=0.6)
+
+    body = box("die_body", (0, 0, 0.5), (1, 1, 1), body_mat)
+    bevel(body, width=0.09, segments=3)
+
+    for normal, value in DIE_FACES.items():
+        nx, ny, nz = normal
+        # Two tangent axes for the face.
+        if nz != 0:
+            u, v = (1, 0, 0), (0, 1, 0)
+            rot = (0, 0, 0)
+        elif nx != 0:
+            u, v = (0, 1, 0), (0, 0, 1)
+            rot = (0, math.radians(90), 0)
+        else:
+            u, v = (1, 0, 0), (0, 0, 1)
+            rot = (math.radians(90), 0, 0)
+        for a, b in PIPS[value]:
+            cx = nx * 0.5 + u[0] * a + v[0] * b
+            cy = ny * 0.5 + u[1] * a + v[1] * b
+            cz = 0.5 + nz * 0.5 + u[2] * a + v[2] * b
+            pip = cylinder(f"pip_{value}", (cx, cy, cz), 0.085, 0.04, pip_mat,
+                           rotation=rot, verts=16)
+            shade_smooth_sides(pip)
+    return "die"
+
+
+# --------------------------------------------------------------------------- #
 # Entry point                                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -610,6 +666,7 @@ BUILDERS = [
     build_prop_cards_citywatch,
     build_prop_coins,
     build_prop_gantry,
+    build_die,
 ]
 
 

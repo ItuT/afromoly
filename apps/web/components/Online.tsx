@@ -78,7 +78,7 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
         </div>
         {view === '2d'
           ? <Board state={table.state} log={table.log} />
-          : <Board3D state={table.state} focusPlayerId={seat.playerId} />}
+          : <Board3D state={table.state} events={table.events} batch={table.batch} focusPlayerId={seat.playerId} />}
       </div>
 
       <aside className="rail">

@@ -1,11 +1,30 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls, Text, useGLTF } from '@react-three/drei';
-import { Color, MeshBasicMaterial, NoToneMapping, Vector3, type Group, type Object3D, type PerspectiveCamera } from 'three';
-import { BOARD, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
-import { MODEL_PATHS, TILE_TOP, buildingSpots, onTile, tileFootprint, tokenSpot } from '@/lib/board3d';
+import {
+  Color,
+  Euler,
+  MeshBasicMaterial,
+  NoToneMapping,
+  Quaternion,
+  Vector3,
+  type Group,
+  type Object3D,
+  type PerspectiveCamera,
+} from 'three';
+import { BOARD, type GameEvent, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
+import {
+  MODEL_PATHS,
+  TILE_TOP,
+  buildingSpots,
+  movePath,
+  onTile,
+  tileCentre,
+  tileFootprint,
+  tokenSpot,
+} from '@/lib/board3d';
 import { rand, tileLabel } from '@/lib/display';
 
 const SEAT_HEX = ['#e0913d', '#5fa8bd', '#7fbe92', '#c9639b', '#d9b23c', '#b48ae0'];
@@ -16,6 +35,19 @@ const INK = '#151310';
 const PAD = '#f4f1ea';
 const CORNER_PAD = '#ebe6da';
 const WELL = '#e3dccb';
+
+/** Seconds per tile when a piece walks, and how high it hops. */
+const HOP_SECONDS = 0.15;
+const HOP_HEIGHT = 0.42;
+/** How long the dice tumble before the pieces start to move. */
+const DICE_LEAD = 1.15;
+
+/** Positions of the pieces as drawn this frame, which lag the state while they move. */
+type LivePositions = Map<string, Vector3>;
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 /* ------------------------------------------------------------------ camera */
 
@@ -28,44 +60,75 @@ export type Focus = 'board' | 'piece';
  * A phone held upright is the case that matters for the overview: the width
  * is the limit, not the height, so the camera pulls back a long way further
  * than on a laptop and takes a steeper pitch. Following a piece is how a phone
- * gets detail, and it is the default there.
+ * gets detail, and it is the default there. While following, the camera
+ * tracks the piece as it is drawn, so it walks with it rather than jumping to
+ * where it will end up.
  */
-function FitCamera({ focus, target }: { focus: Focus; target: [number, number, number] }) {
+function FitCamera({
+  focus,
+  fallback,
+  live,
+  playerId,
+}: {
+  focus: Focus;
+  /** Where the followed piece stands according to the state. */
+  fallback: [number, number, number];
+  live: React.RefObject<LivePositions>;
+  playerId: string | null;
+}) {
   const { camera, size, controls } = useThree();
   const lastClass = useRef<'portrait' | 'landscape' | null>(null);
   const lastFocus = useRef<Focus | null>(null);
   const goal = useRef<{ position: Vector3; target: Vector3; settled: boolean } | null>(null);
+  const resetDirection = useRef(false);
 
   useEffect(() => {
     const cam = camera as PerspectiveCamera;
     const aspect = size.width / Math.max(size.height, 1);
     const klass = aspect < 1 ? 'portrait' : 'landscape';
     const refit = lastClass.current !== klass || lastFocus.current !== focus;
-    const look = new Vector3(...(focus === 'piece' ? target : [0, 0, 0]));
-
-    let distance: number;
-    let direction = cam.position.clone().sub(look);
-    if (focus === 'piece') {
-      distance = 7.5;
-      if (refit) direction.set(0, 1, 0.9);
-    } else {
-      const vfov = (cam.fov * Math.PI) / 180;
-      const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-      distance = Math.max(10.4 / Math.tan(vfov / 2), 10.8 / Math.tan(hfov / 2));
-      if (refit || direction.lengthSq() < 1e-6) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
-    }
-    direction = direction.normalize().multiplyScalar(distance);
-
-    goal.current = { position: look.clone().add(direction), target: look, settled: false };
     lastClass.current = klass;
     lastFocus.current = focus;
-  }, [camera, size.width, size.height, focus, target[0], target[1], target[2]]);
+
+    if (focus === 'piece') {
+      goal.current = null;
+      resetDirection.current = refit;
+      return;
+    }
+    const vfov = (cam.fov * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+    const distance = Math.max(10.4 / Math.tan(vfov / 2), 10.8 / Math.tan(hfov / 2));
+    let direction = cam.position.clone();
+    if (refit || direction.lengthSq() < 1e-6) direction.set(0, 1, klass === 'portrait' ? 0.45 : 0.95);
+    direction = direction.normalize().multiplyScalar(distance);
+    goal.current = { position: direction, target: new Vector3(0, 0, 0), settled: false };
+  }, [camera, size.width, size.height, focus]);
 
   useFrame((_, delta) => {
-    const g = goal.current;
-    if (!g || g.settled) return;
     const orbit = controls as { target: Vector3; update?: () => void } | null;
     const k = 1 - Math.exp(-delta * 6);
+
+    if (focus === 'piece') {
+      const here = (playerId && live.current.get(playerId)) || new Vector3(...fallback);
+      let direction: Vector3;
+      if (resetDirection.current || !orbit) {
+        direction = new Vector3(0, 1, 0.9).normalize();
+        resetDirection.current = false;
+      } else {
+        direction = camera.position.clone().sub(orbit.target);
+        if (direction.lengthSq() < 1e-6) direction.set(0, 1, 0.9);
+        direction.normalize();
+      }
+      const wanted = here.clone().add(direction.multiplyScalar(7.5));
+      camera.position.lerp(wanted, k);
+      if (orbit) orbit.target.lerp(here, k);
+      else camera.lookAt(here);
+      orbit?.update?.();
+      return;
+    }
+
+    const g = goal.current;
+    if (!g || g.settled) return;
     camera.position.lerp(g.position, k);
     if (orbit) orbit.target.lerp(g.target, k);
     else camera.lookAt(g.target);
@@ -154,31 +217,157 @@ function spotOf(state: ObservableState, playerId: string | null): [number, numbe
   return tokenSpot(player.position, here.indexOf(player), here.length);
 }
 
-function Pieces({ state }: { state: ObservableState }) {
-  const perTile = groupByTile(state);
+interface Hop {
+  to: Vector3;
+  height: number;
+  seconds: number;
+}
+
+interface Walk {
+  hops: Hop[];
+  index: number;
+  startAt: number;
+  from: Vector3 | null;
+  hopStart: number;
+}
+
+/**
+ * The pieces, walking the board.
+ *
+ * Positions are driven per frame rather than through React state: a piece
+ * hops tile by tile along the path an event describes, then settles onto its
+ * exact spot from the state. With no walk pending it eases toward the state,
+ * which also covers a resync after a dropped socket.
+ */
+function Pieces({
+  state,
+  events,
+  batch,
+  live,
+}: {
+  state: ObservableState;
+  events: GameEvent[];
+  batch: number;
+  live: React.RefObject<LivePositions>;
+}) {
+  const groups = useRef(new Map<string, Group>());
+  const walks = useRef(new Map<string, Walk>());
+  const reduced = useMemo(prefersReducedMotion, []);
+  const { clock } = useThree();
+
   const current = state.players[state.currentPlayerIndex];
-  const currentSpot = current ? spotOf(state, current.id) : null;
+  const currentId = current && !current.bankrupt ? current.id : null;
+
+  // Queue the walks a batch of events describes.
+  useEffect(() => {
+    if (reduced || batch === 0) return;
+    const now = clock.elapsedTime;
+    const lead = events.some((e) => e.kind === 'diceRolled') ? DICE_LEAD : 0;
+    const busyUntil = new Map<string, number>();
+    const queue = (playerId: string, hops: Hop[]) => {
+      if (hops.length === 0) return;
+      const start = Math.max(busyUntil.get(playerId) ?? 0, now + lead);
+      const existing = walks.current.get(playerId);
+      if (existing) existing.hops.push(...hops);
+      else walks.current.set(playerId, { hops, index: 0, startAt: start, from: null, hopStart: 0 });
+      busyUntil.set(playerId, start + hops.reduce((t, h) => t + h.seconds, 0));
+    };
+    for (const event of events) {
+      if (event.kind === 'moved') {
+        queue(
+          event.playerId,
+          movePath(event.from, event.to).map((tile) => ({
+            to: new Vector3(...tileCentre(tile)),
+            height: HOP_HEIGHT,
+            seconds: HOP_SECONDS,
+          })),
+        );
+      } else if (event.kind === 'sentToImpound') {
+        queue(event.playerId, [{ to: new Vector3(...tileCentre(10)), height: 1.8, seconds: 0.75 }]);
+      }
+    }
+  }, [batch, events, reduced, clock]);
+
+  useFrame((_, delta) => {
+    const now = clock.elapsedTime;
+    for (const player of state.players) {
+      const group = groups.current.get(player.id);
+      if (!group || player.bankrupt) continue;
+      const walk = walks.current.get(player.id);
+      const spot = spotOf(state, player.id);
+      const target = spot ? new Vector3(...spot) : null;
+
+      if (walk && now >= walk.startAt) {
+        const hop = walk.hops[walk.index];
+        if (!hop) {
+          walks.current.delete(player.id);
+        } else {
+          if (!walk.from) {
+            walk.from = group.position.clone();
+            walk.hopStart = now;
+          }
+          const t = Math.min(1, (now - walk.hopStart) / hop.seconds);
+          group.position.lerpVectors(walk.from, hop.to, t);
+          group.position.y += Math.sin(Math.PI * t) * hop.height;
+          if (t >= 1) {
+            walk.index += 1;
+            walk.from = null;
+            if (walk.index >= walk.hops.length) walks.current.delete(player.id);
+          }
+        }
+      } else if (!walk && target) {
+        group.position.lerp(target, 1 - Math.exp(-delta * 14));
+      }
+      live.current.set(player.id, group.position);
+    }
+  });
+
+  // One stable ref callback per player. A fresh closure each render would make
+  // React re-bind it, and the re-bind would put the piece back on its state
+  // position in the middle of a walk.
+  const binders = useRef(new Map<string, (el: Group | null) => void>());
+  const firstSpot = useRef(new Map<string, [number, number, number] | null>());
+  for (const player of state.players) {
+    if (!firstSpot.current.has(player.id)) firstSpot.current.set(player.id, spotOf(state, player.id));
+  }
+  const bind = useCallback((playerId: string) => {
+    let binder = binders.current.get(playerId);
+    if (!binder) {
+      binder = (el: Group | null) => {
+        if (!el) {
+          groups.current.delete(playerId);
+          live.current.delete(playerId);
+          return;
+        }
+        if (!groups.current.has(playerId)) {
+          const spot = firstSpot.current.get(playerId);
+          if (spot) el.position.set(...spot);
+        }
+        groups.current.set(playerId, el);
+      };
+      binders.current.set(playerId, binder);
+    }
+    return binder;
+  }, [live]);
 
   return (
     <>
-      {[...perTile.entries()].flatMap(([tileIndex, here]) =>
-        here.map((player, slot) => {
-          const seat = state.players.findIndex((p) => p.id === player.id);
-          const url = MODEL_PATHS[player.token as TokenId] ?? MODEL_PATHS.quantum;
-          return (
+      {state.players.map((player, seat) => {
+        if (player.bankrupt) return null;
+        const url = MODEL_PATHS[player.token as TokenId] ?? MODEL_PATHS.quantum;
+        return (
+          <group key={player.id} ref={bind(player.id)}>
             <Model
-              key={player.id}
               url={url}
-              position={tokenSpot(tileIndex, slot, here.length)}
-              rotationY={tileFootprint(tileIndex).facing}
+              position={[0, 0, 0]}
+              rotationY={tileFootprint(player.position).facing}
               scale={0.8}
               tint={SEAT_HEX[seat % SEAT_HEX.length]}
             />
-          );
-        }),
-      )}
-
-      {currentSpot && <TurnMarker position={currentSpot} />}
+            {player.id === currentId && <TurnMarker position={[0, 0, 0]} />}
+          </group>
+        );
+      })}
 
       {BOARD.map((tile) => {
         if (tile.kind !== 'street') return null;
@@ -196,6 +385,113 @@ function Pieces({ state }: { state: ObservableState }) {
           <Model key={`van-${tile.index}-${i}`} url={MODEL_PATHS.van} position={spot} rotationY={facing} scale={0.34} />
         ));
       })}
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------- dice */
+
+/** The rotation that brings a face value to the top, given how the die was modelled. */
+const FACE_UP: Record<number, Euler> = {
+  1: new Euler(0, 0, 0),
+  6: new Euler(Math.PI, 0, 0),
+  3: new Euler(0, 0, Math.PI / 2),
+  4: new Euler(0, 0, -Math.PI / 2),
+  2: new Euler(Math.PI / 2, 0, 0),
+  5: new Euler(-Math.PI / 2, 0, 0),
+};
+
+const DIE_SCALE = 0.72;
+const DIE_REST_Y = TILE_TOP + DIE_SCALE / 2 + 0.02;
+const DIE_SPOTS: [number, number][] = [
+  [-0.95, 3.2],
+  [0.95, 3.2],
+];
+
+interface Throw {
+  startAt: number;
+  finals: Quaternion[];
+  spins: Vector3[];
+  phases: number[];
+}
+
+/**
+ * Two dice thrown into the well on every roll. They tumble, drop, settle on
+ * the faces the engine rolled, sit for a moment, then shrink away.
+ */
+function Dice({ events, batch }: { events: GameEvent[]; batch: number }) {
+  const { scene } = useGLTF(MODEL_PATHS.die);
+  const dice = useMemo(() => [scene.clone(true), scene.clone(true)], [scene]);
+  const groups = useRef<(Group | null)[]>([null, null]);
+  const throwRef = useRef<Throw | null>(null);
+  const reduced = useMemo(prefersReducedMotion, []);
+  const { clock } = useThree();
+
+  useEffect(() => {
+    if (batch === 0) return;
+    const rolled = events.find((e) => e.kind === 'diceRolled');
+    if (!rolled || rolled.kind !== 'diceRolled') return;
+    const finals = rolled.dice.map((face) => {
+      const yaw = new Quaternion().setFromEuler(new Euler(0, Math.random() * Math.PI * 2, 0));
+      return yaw.multiply(new Quaternion().setFromEuler(FACE_UP[face] ?? FACE_UP[1]!));
+    });
+    throwRef.current = {
+      startAt: reduced ? clock.elapsedTime - 1.3 : clock.elapsedTime,
+      finals,
+      spins: [0, 1].map(() => new Vector3(6 + Math.random() * 6, 4 + Math.random() * 5, 5 + Math.random() * 6)),
+      phases: [Math.random() * Math.PI, Math.random() * Math.PI],
+    };
+    groups.current.forEach((g, i) => {
+      if (!g) return;
+      g.visible = true;
+      g.scale.setScalar(DIE_SCALE);
+      g.position.set(DIE_SPOTS[i]![0], DIE_REST_Y + 1.8, DIE_SPOTS[i]![1]);
+      g.quaternion.setFromEuler(new Euler(Math.random() * 3, Math.random() * 3, Math.random() * 3));
+    });
+  }, [batch, events, reduced, clock]);
+
+  useFrame((_, delta) => {
+    const t = throwRef.current;
+    if (!t) return;
+    const age = clock.elapsedTime - t.startAt;
+    groups.current.forEach((g, i) => {
+      if (!g) return;
+      const [x, z] = DIE_SPOTS[i]!;
+      if (age < 0.9) {
+        // Tumbling down, with a couple of decaying bounces.
+        const fall = Math.max(0, 1 - age / 0.9);
+        const bounce = Math.abs(Math.cos(age * 9 + t.phases[i]!)) * fall * fall * 1.6;
+        g.position.set(x, DIE_REST_Y + bounce, z);
+        const spin = t.spins[i]!.clone().multiplyScalar(delta * fall);
+        g.quaternion.multiply(new Quaternion().setFromEuler(new Euler(spin.x, spin.y, spin.z)));
+      } else if (age < 1.3) {
+        g.position.set(x, DIE_REST_Y, z);
+        g.quaternion.slerp(t.finals[i]!, 1 - Math.exp(-delta * 14));
+      } else if (age < 3.6) {
+        g.quaternion.copy(t.finals[i]!);
+      } else if (age < 4.0) {
+        g.scale.setScalar(DIE_SCALE * Math.max(0, 1 - (age - 3.6) / 0.4));
+      } else {
+        g.visible = false;
+      }
+    });
+    if (age >= 4.0) throwRef.current = null;
+  });
+
+  return (
+    <>
+      {dice.map((die, i) => (
+        <group
+          key={i}
+          ref={(el) => {
+            groups.current[i] = el;
+          }}
+          visible={false}
+          scale={DIE_SCALE}
+        >
+          <primitive object={die} position={[-0.5, -0.5, -0.5]} />
+        </group>
+      ))}
     </>
   );
 }
@@ -451,7 +747,17 @@ function useVividBoard() {
   }, [scene]);
 }
 
-function Scene({ state }: { state: ObservableState }) {
+function Scene({
+  state,
+  events,
+  batch,
+  live,
+}: {
+  state: ObservableState;
+  events: GameEvent[];
+  batch: number;
+  live: React.RefObject<LivePositions>;
+}) {
   const board = useVividBoard();
   return (
     <>
@@ -459,19 +765,26 @@ function Scene({ state }: { state: ObservableState }) {
       <Well state={state} />
       <Props />
       <Labels state={state} />
-      <Pieces state={state} />
+      <Pieces state={state} events={events} batch={batch} live={live} />
+      <Dice events={events} batch={batch} />
     </>
   );
 }
 
 export function Board3D({
   state,
+  events,
+  batch,
   focusPlayerId,
 }: {
   state: ObservableState;
+  /** The last batch of engine events, which the scene acts out. */
+  events: GameEvent[];
+  batch: number;
   /** Whose piece "My token" swoops to. Hot seat passes whoever is on the clock. */
   focusPlayerId: string | null;
 }) {
+  const live = useRef<LivePositions>(new Map());
   // A phone cannot make forty tiles legible at once, so it opens on the piece.
   const [focus, setFocus] = useState<Focus>(() =>
     typeof window !== 'undefined' && window.innerWidth < 720 ? 'piece' : 'board',
@@ -498,7 +811,7 @@ export function Board3D({
           <meshStandardMaterial color="#0e0d0a" roughness={1} />
         </mesh>
         <Suspense fallback={null}>
-          <Scene state={state} />
+          <Scene state={state} events={events} batch={batch} live={live} />
           {/*
             A procedural environment for the metal tokens to reflect. The drei
             presets fetch an HDR from GitHub at runtime, which makes the whole
@@ -519,7 +832,7 @@ export function Board3D({
           maxPolarAngle={Math.PI / 2.35}
           target={[0, 0, 0]}
         />
-        <FitCamera focus={focus} target={spot} />
+        <FitCamera focus={focus} fallback={spot} live={live} playerId={focusPlayerId} />
       </Canvas>
       <div className="board3d-controls" role="group" aria-label="Camera">
         <button aria-pressed={focus === 'board'} onClick={() => setFocus('board')}>Whole board</button>

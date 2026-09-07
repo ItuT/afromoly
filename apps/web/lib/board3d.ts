@@ -111,6 +111,7 @@ export const MODEL_PATHS = {
   propCardsCitywatch: '/models/prop-cards-citywatch.glb',
   propCoins: '/models/prop-coins.glb',
   propGantry: '/models/prop-gantry.glb',
+  die: '/models/die.glb',
 } as const;
 
 /**
@@ -128,4 +129,24 @@ export function onTile(index: number, dx: number, dz: number): [number, number, 
     TILE_TOP,
     t.z - dx * Math.sin(theta) + dz * Math.cos(theta),
   ];
+}
+
+/** The middle of a tile, where a piece passes through on its way somewhere. */
+export function tileCentre(index: number): [number, number, number] {
+  return tokenSpot(index, 0, 1);
+}
+
+/**
+ * The tiles a piece visits between two spaces, in order, ending on `to`.
+ *
+ * Only one thing in the rulebook moves a piece backwards, "Short Left, After
+ * Robot!", and it is three spaces. Anything further is a forward move.
+ */
+export function movePath(from: number, to: number): number[] {
+  if (from === to) return [];
+  const forward = (to - from + 40) % 40;
+  const backward = (from - to + 40) % 40;
+  const step = backward > 0 && backward <= 3 ? -1 : 1;
+  const count = step === 1 ? forward : backward;
+  return Array.from({ length: count }, (_, i) => (from + step * (i + 1) + 40) % 40);
 }

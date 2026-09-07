@@ -34,7 +34,7 @@ export function Game(props: Props) {
 
 function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart: () => void }) {
   const options = useMemo<Partial<GameOptions>>(() => ({ jackpot }), [jackpot]);
-  const { state, log, waitingOn, legal, dispatch } = useHotSeat(seats, seed, options);
+  const { state, log, events, batch, waitingOn, legal, dispatch } = useHotSeat(seats, seed, options);
   const [view, setView] = useState<BoardView>('2d');
 
   return (
@@ -45,7 +45,7 @@ function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart:
           <span className="tag">Johannesburg Edition · hot seat · turn {state.turnNumber}</span>
           <ViewSwitch view={view} onChange={setView} />
         </div>
-        {view === '2d' ? <Board state={state} log={log} /> : <Board3D state={state} focusPlayerId={waitingOn} />}
+        {view === '2d' ? <Board state={state} log={log} /> : <Board3D state={state} events={events} batch={batch} focusPlayerId={waitingOn} />}
       </div>
 
       <aside className="rail">

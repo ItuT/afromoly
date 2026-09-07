@@ -29,7 +29,7 @@ except ImportError:
 names = ["board","quantum-van","terminal-depot","token-quantum","token-coin",
          "token-robot","token-vest","token-megaphone","token-sneaker",
          "prop-robot","prop-bulb","prop-tap","prop-cards-kombi",
-         "prop-cards-citywatch","prop-coins","prop-gantry"]
+         "prop-cards-citywatch","prop-coins","prop-gantry","die"]
 paths = [os.path.join("previews", f"{n}.png") for n in names]
 images = [Image.open(p).convert("RGB") for p in paths if os.path.exists(p)]
 if not images:

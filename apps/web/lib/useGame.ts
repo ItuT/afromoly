@@ -24,6 +24,10 @@ export interface LogLine {
 export interface HotSeat {
   state: GameState;
   log: LogLine[];
+  /** The events from the last applied action, for the scene to act out. */
+  events: GameEvent[];
+  /** Bumps with every batch, so identical batches are still told apart. */
+  batch: number;
   /** The seat the game is waiting on, which is not always the seat whose turn it is. */
   waitingOn: string;
   legal: Action[];
@@ -121,10 +125,12 @@ interface Shell {
   state: GameState;
   log: LogLine[];
   nextId: number;
+  events: GameEvent[];
+  batch: number;
 }
 
 function makeShell(state: GameState, opening: string): Shell {
-  return { state, log: [{ id: 0, text: opening, tone: 'head' }], nextId: 1 };
+  return { state, log: [{ id: 0, text: opening, tone: 'head' }], nextId: 1, events: [], batch: 0 };
 }
 
 function shellReducer(shell: Shell, action: Action): Shell {
@@ -135,6 +141,8 @@ function shellReducer(shell: Shell, action: Action): Shell {
     state: result.state,
     log: [...shell.log, ...lines].slice(-300),
     nextId: shell.nextId + lines.length,
+    events: result.events,
+    batch: shell.batch + 1,
   };
 }
 
@@ -154,5 +162,14 @@ export function useHotSeat(
   const legal = useMemo(() => legalActions(shell.state, waitingOn), [shell.state, waitingOn]);
   const can = useCallback((kind: ActionKind) => legal.some((a) => a.kind === kind), [legal]);
 
-  return { state: shell.state, log: shell.log, waitingOn, legal, can, dispatch };
+  return {
+    state: shell.state,
+    log: shell.log,
+    events: shell.events,
+    batch: shell.batch,
+    waitingOn,
+    legal,
+    can,
+    dispatch,
+  };
 }
