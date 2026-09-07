@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useOnline } from '@/lib/useOnline';
 import type { Seat } from '@/lib/api';
 import { Board } from '@/components/Board';
+import { Board3D } from '@/components/Board3D';
+import { LogPanel } from '@/components/LogPanel';
+import { ViewSwitch, type BoardView } from '@/components/ViewSwitch';
 import { Seats } from '@/components/Seats';
 import { Holdings } from '@/components/Holdings';
 import { Actions } from '@/components/Actions';
@@ -10,6 +14,7 @@ import { seatColour } from '@/lib/display';
 
 export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
   const table = useOnline(seat);
+  const [view, setView] = useState<BoardView>('2d');
   const isHost = table.hostId === seat.playerId;
 
   if (!table.state) {
@@ -69,8 +74,11 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
           <span className="tag">
             Table {table.code} · turn {table.state.turnNumber} · {table.connection}
           </span>
+          <ViewSwitch view={view} onChange={setView} />
         </div>
-        <Board state={table.state} log={table.log} />
+        {view === '2d'
+          ? <Board state={table.state} log={table.log} />
+          : <Board3D state={table.state} />}
       </div>
 
       <aside className="rail">
@@ -87,6 +95,7 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
               : table.state.players.find((p) => p.id === table.waitingOn)?.name ?? null
           }
         />
+        {view === '3d' && <LogPanel log={table.log} />}
         <Holdings state={table.state} playerId={seat.playerId} />
         <div className="panel">
           <h2>Table</h2>

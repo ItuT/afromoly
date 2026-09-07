@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react';
 import type { GameOptions, PlayerSetup } from '@afromoly/engine';
 import { useHotSeat } from '@/lib/useGame';
 import { Board } from '@/components/Board';
+import { Board3D } from '@/components/Board3D';
+import { LogPanel } from '@/components/LogPanel';
+import { ViewSwitch, type BoardView } from '@/components/ViewSwitch';
 import { Seats } from '@/components/Seats';
 import { Holdings } from '@/components/Holdings';
 import { Actions } from '@/components/Actions';
@@ -32,6 +35,7 @@ export function Game(props: Props) {
 function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart: () => void }) {
   const options = useMemo<Partial<GameOptions>>(() => ({ jackpot }), [jackpot]);
   const { state, log, waitingOn, legal, dispatch } = useHotSeat(seats, seed, options);
+  const [view, setView] = useState<BoardView>('2d');
 
   return (
     <div className="shell">
@@ -39,8 +43,9 @@ function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart:
         <div className="masthead">
           <h1>Afromoly</h1>
           <span className="tag">Johannesburg Edition · hot seat · turn {state.turnNumber}</span>
+          <ViewSwitch view={view} onChange={setView} />
         </div>
-        <Board state={state} log={log} />
+        {view === '2d' ? <Board state={state} log={log} /> : <Board3D state={state} />}
       </div>
 
       <aside className="rail">
@@ -52,6 +57,7 @@ function Table({ seats, seed, jackpot, onQuit, onRestart }: Props & { onRestart:
           dispatch={dispatch}
           restart={onRestart}
         />
+        {view === '3d' && <LogPanel log={log} />}
         <Holdings state={state} playerId={waitingOn} />
         <div className="panel">
           <h2>Table</h2>

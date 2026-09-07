@@ -1,5 +1,5 @@
 /**
- * The 40-tile board, transcribed from Readme.md.
+ * The 40-tile board, transcribed from GAME-DESIGN.md.
  *
  * Every price, rent, build cost and mortgage value below is copied from the
  * "Street Title Deeds & Rent Progression" table. Where the Readme contradicts

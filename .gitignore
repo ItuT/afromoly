@@ -9,3 +9,10 @@ coverage/
 .env
 .env.local
 *.blend1
+
+# Blender preview stills are reproducible with assets/blender/preview.sh.
+# Only the stitched contact sheet is kept, for the docs.
+assets/blender/previews/*.png
+!assets/blender/previews/contact.png
+__pycache__/
+*.pyc

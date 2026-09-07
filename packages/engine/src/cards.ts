@@ -1,5 +1,5 @@
 /**
- * The Kombi Hustle and City Watch decks, transcribed from Readme.md.
+ * The Kombi Hustle and City Watch decks, transcribed from GAME-DESIGN.md.
  *
  * Forward movement always pays the Month-End Payday salary when the token
  * passes or lands on space 0, per rulebook section 4A. That is why no card

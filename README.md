@@ -5,9 +5,13 @@ Gauteng commuter property game. Players are transit tycoons buying up corridors 
 Ferreirasdorp to Sandton CBD, running Quantum van fleets and Terminal Depots, and squeezing
 rivals off the board.
 
-The complete game design lives in [Readme.md](Readme.md) and is the single source of truth for
-rules. The build plan, including every rule contradiction found in that design and how it was
-resolved, lives in [PLAN.md](PLAN.md).
+The complete game design, board roster, both card decks and the rulebook live in
+[GAME-DESIGN.md](GAME-DESIGN.md), and that document is the single source of truth for rules. The
+build plan, including every rule contradiction found in it and how each was resolved, lives in
+[PLAN.md](PLAN.md).
+
+> The design document was originally called `Readme.md`. It was renamed because macOS filesystems
+> are case-insensitive, so `Readme.md` and this `README.md` are the same file and cannot coexist.
 
 ## Status
 
@@ -16,7 +20,7 @@ resolved, lives in [PLAN.md](PLAN.md).
 | 1 | Rules engine, tests, terminal hot-seat | **done** |
 | 2 | Next.js interface, 2D board, hot-seat in the browser | **done** |
 | 3 | Lambda, DynamoDB and WebSocket multiplayer | **done** |
-| 4 | Blender assets and the 3D board | not started |
+| 4 | Blender assets and the 3D board | **done** |
 | 5 | Deploy to afromoly.motebo.co.za | not started |
 
 ## Layout
@@ -28,7 +32,7 @@ apps/cli           terminal hot-seat runner
 apps/web           Next.js client, hot seat and online
 services/api       Lambda handlers, DynamoDB store, local dev server
 infra              AWS CDK stacks (phase 5)
-assets/blender     .blend sources and the glTF export script (phase 4)
+assets/blender     the model build script, its .blend outputs and the exporter
 ```
 
 ## Getting started
@@ -126,6 +130,22 @@ Two smaller readings the Readme does not cover, both flagged here rather than bu
 - **Auctioning the last van or depot** when the bank runs short is not implemented. The engine
   refuses the purchase instead, which is the mechanically important half of the rule.
 
+## The 3D board
+
+The client has two views of the same game, switched from the header. The flat
+board is the working view; the 3D board renders the real pieces.
+
+Every model is built from primitives by a Blender script, so the `.blend` files
+are outputs rather than hand-edited sources. Rebuild them with:
+
+```bash
+cd assets/blender && ./export.sh
+```
+
+That writes `.glb` files into `apps/web/public/models`. See
+[assets/blender/README.md](assets/blender/README.md) for what gets built and how
+the board's dimensions are kept in step between Blender and the client.
+
 ## The server
 
 `services/api` is server-authoritative. Clients send intents; the engine runs
@@ -144,7 +164,8 @@ with a TTL, keyed as described in [PLAN.md](PLAN.md#4-dynamodb-key-design).
 
 ## Testing
 
-141 tests: 115 over the engine and 26 over the server. Every cell of the Readme's rent table is asserted against an
+150 tests: 115 over the engine, 26 over the server, and 9 over the board's
+3D geometry. Every cell of the Readme's rent table is asserted against an
 independently transcribed fixture, so a typo in the board data fails rather than agreeing with
 itself. Beyond that: both bankruptcy routes, all three impound exits, the even-build rule in
 both directions, mortgage interest on lifting and on transfer, auctions, the jackpot pot, and
@@ -155,6 +176,10 @@ The server suite runs the whole path, from creating a table through joining,
 starting, playing and disconnecting, against an in-memory store. It covers
 redaction, the optimistic lock, nonce replay, acting out of turn, and acting on
 another player's behalf.
+
+The geometry tests assert that no two tiles overlap, that every token and every
+van lands inside its own tile however many are sharing it, and that buildings sit
+on the inner half of a street rather than hanging off the outer edge.
 
 ```bash
 pnpm test
