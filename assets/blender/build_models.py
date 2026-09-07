@@ -363,15 +363,15 @@ def build_token_coin():
     return "token-coin"
 
 
-def build_token_robot():
-    reset_scene()
-    pewter = token_base(radius=0.5, height=0.08)
+def traffic_light(post_mat, lit=False):
+    """A three-lens Joburg signal on a post. `lit` gives the lenses a glow."""
     housing = material("SignalHousing", P.DARK_METAL, metallic=0.6, roughness=0.4)
-    lens_red = material("LensRed", (0.769, 0.282, 0.247), roughness=0.25)
-    lens_amber = material("LensAmber", (0.878, 0.569, 0.239), roughness=0.25)
-    lens_green = material("LensGreen", (0.306, 0.639, 0.357), roughness=0.25)
+    glow = 0.8 if lit else 0.0
+    lens_red = material("LensRed", (0.769, 0.282, 0.247), roughness=0.25, glow=glow)
+    lens_amber = material("LensAmber", (0.878, 0.569, 0.239), roughness=0.25, glow=glow)
+    lens_green = material("LensGreen", (0.306, 0.639, 0.357), roughness=0.25, glow=glow)
 
-    cylinder("signal_post", (0, 0, 0.42), 0.075, 0.70, pewter)
+    cylinder("signal_post", (0, 0, 0.42), 0.075, 0.70, post_mat)
     head = box("signal_head", (0, 0, 1.05), (0.34, 0.26, 0.72), housing)
     bevel(head, width=0.03, segments=2)
     for z, mat in ((1.31, lens_red), (1.05, lens_amber), (0.79, lens_green)):
@@ -381,6 +381,12 @@ def build_token_robot():
         # A small hood over each lens, the way Joburg signals are built.
         box("signal_hood", (0, 0.20, z + 0.11), (0.26, 0.12, 0.03), housing,
             rotation=(math.radians(-14), 0, 0))
+
+
+def build_token_robot():
+    reset_scene()
+    pewter = token_base(radius=0.5, height=0.08)
+    traffic_light(pewter)
     return "token-robot"
 
 
@@ -453,6 +459,137 @@ def build_token_sneaker():
 
 
 # --------------------------------------------------------------------------- #
+# Tile props: the pictures on the special spaces                              #
+# --------------------------------------------------------------------------- #
+
+def build_prop_robot():
+    """The impound lot's signal, in real colours with lit lenses."""
+    reset_scene()
+    post = material("SignalPost", P.CONCRETE, roughness=0.7)
+    traffic_light(post, lit=True)
+    return "prop-robot"
+
+
+def build_prop_bulb():
+    """City Power: a bare bulb, the way a spaza lights up at dusk."""
+    reset_scene()
+    glass = material("BulbGlass", (0.98, 0.86, 0.45), roughness=0.2, glow=0.9)
+    brass = material("BulbBrass", (0.72, 0.58, 0.30), metallic=0.85, roughness=0.35)
+    tip = material("BulbTip", P.DARK_METAL, metallic=0.5, roughness=0.5)
+
+    globe = sphere("bulb_globe", (0, 0, 0.78), 0.34, glass, segments=20, rings=12)
+    shade_smooth(globe)
+    neck = cone("bulb_neck", (0, 0, 0.44), 0.19, 0.13, 0.22, glass, verts=20)
+    shade_smooth_sides(neck)
+    screw = cylinder("bulb_screw", (0, 0, 0.24), 0.14, 0.22, brass, verts=20)
+    shade_smooth_sides(screw)
+    for z in (0.18, 0.26, 0.34):
+        ring = cylinder("bulb_thread", (0, 0, z), 0.155, 0.03, brass, verts=20)
+        shade_smooth_sides(ring)
+    contact = cylinder("bulb_contact", (0, 0, 0.09), 0.07, 0.08, tip, verts=12)
+    shade_smooth_sides(contact)
+    return "prop-bulb"
+
+
+def build_prop_tap():
+    """Joburg Water: a standpipe tap with a drop hanging off it."""
+    reset_scene()
+    chrome = material("TapChrome", (0.80, 0.82, 0.85), metallic=0.95, roughness=0.22)
+    handle = material("TapHandle", (0.16, 0.42, 0.62), roughness=0.5)
+    water = material("TapWater", (0.45, 0.72, 0.90), roughness=0.1, glow=0.3)
+
+    pipe = cylinder("tap_pipe", (0, 0, 0.36), 0.075, 0.72, chrome, verts=16)
+    shade_smooth_sides(pipe)
+    body = cylinder("tap_body", (0, 0, 0.78), 0.13, 0.22, chrome, verts=18)
+    shade_smooth_sides(body)
+    spout = cylinder("tap_spout", (0, 0.26, 0.78), 0.06, 0.42, chrome,
+                     rotation=(math.radians(90), 0, 0), verts=14)
+    shade_smooth_sides(spout)
+    mouth = cylinder("tap_mouth", (0, 0.45, 0.70), 0.06, 0.18, chrome, verts=14)
+    shade_smooth_sides(mouth)
+    stem = cylinder("tap_stem", (0, 0, 0.95), 0.045, 0.14, chrome, verts=12)
+    shade_smooth_sides(stem)
+    for angle in (0, 90):
+        box("tap_handle", (0, 0, 1.03), (0.34, 0.06, 0.05), handle,
+            rotation=(0, 0, math.radians(angle)))
+    drop = sphere("tap_drop", (0, 0.45, 0.52), 0.055, water, segments=10, rings=6)
+    shade_smooth(drop)
+    return "prop-tap"
+
+
+def card_stack(face_colour, emblem_colour):
+    """A tidy stack of cards, top card face up in the deck's colour."""
+    paper = material("CardPaper", (0.93, 0.91, 0.86), roughness=0.85)
+    face = material("CardFace", face_colour, roughness=0.6, glow=0.15)
+    emblem = material("CardEmblem", emblem_colour, roughness=0.6)
+    thickness = 0.022
+    for i in range(6):
+        z = thickness / 2 + i * thickness
+        twist = math.radians((-1) ** i * 2.5)
+        box(f"card_{i}", (0.012 * (i % 2), 0.008 * (i % 3), z), (0.92, 0.62, thickness), paper,
+            rotation=(0, 0, twist))
+    top_z = 6 * thickness
+    box("card_face", (0, 0, top_z + 0.003), (0.82, 0.52, 0.006), face)
+    box("card_emblem", (0, 0, top_z + 0.008), (0.18, 0.26, 0.006), emblem)
+    box("card_emblem_bar", (0, -0.2, top_z + 0.008), (0.5, 0.05, 0.006), emblem)
+
+
+def build_prop_cards_kombi():
+    reset_scene()
+    card_stack(P.OCHRE, (0.10, 0.09, 0.07))
+    return "prop-cards-kombi"
+
+
+def build_prop_cards_citywatch():
+    reset_scene()
+    card_stack(P.HUB, (0.10, 0.09, 0.07))
+    return "prop-cards-citywatch"
+
+
+def build_prop_coins():
+    """The Taxi Rank Queue's pot: a stack of R5s with a couple loose."""
+    reset_scene()
+    gold = material("CoinOuter", (0.706, 0.549, 0.286), metallic=0.9, roughness=0.3)
+    silver = material("CoinInner", (0.678, 0.686, 0.706), metallic=0.9, roughness=0.25)
+    thickness = 0.07
+    for i in range(6):
+        z = thickness / 2 + i * thickness
+        x, y = 0.03 * math.cos(i * 1.7), 0.03 * math.sin(i * 1.7)
+        outer = cylinder(f"coin_{i}", (x, y, z), 0.27, thickness, gold, verts=28,
+                         rotation=(0, 0, i * 0.4))
+        shade_smooth_sides(outer)
+        inner = cylinder(f"coin_core_{i}", (x, y, z), 0.17, thickness + 0.004, silver, verts=28)
+        shade_smooth_sides(inner)
+    for j, (x, y) in enumerate(((0.46, 0.18), (-0.38, -0.30))):
+        loose = cylinder(f"coin_loose_{j}", (x, y, thickness / 2), 0.27, thickness, gold,
+                         verts=28, rotation=(0, 0, 0.9 * j))
+        shade_smooth_sides(loose)
+        core = cylinder(f"coin_loose_core_{j}", (x, y, thickness / 2), 0.17, thickness + 0.004,
+                        silver, verts=28)
+        shade_smooth_sides(core)
+    return "prop-coins"
+
+
+def build_prop_gantry():
+    """An e-toll gantry: two posts, a beam, and the cameras that read your plate."""
+    reset_scene()
+    steel = material("GantrySteel", (0.62, 0.64, 0.66), metallic=0.8, roughness=0.4)
+    sign = material("GantrySign", (0.16, 0.36, 0.62), roughness=0.5, glow=0.25)
+    cam = material("GantryCamera", P.DARK_METAL, metallic=0.5, roughness=0.5)
+
+    for x in (-0.58, 0.58):
+        post = cylinder("gantry_post", (x, 0, 0.55), 0.05, 1.10, steel, verts=12)
+        shade_smooth_sides(post)
+        box("gantry_foot", (x, 0, 0.03), (0.2, 0.2, 0.06), steel)
+    box("gantry_beam", (0, 0, 1.12), (1.32, 0.14, 0.14), steel)
+    box("gantry_beam_low", (0, 0, 0.96), (1.32, 0.10, 0.06), steel)
+    for x in (-0.36, 0, 0.36):
+        box("gantry_camera", (x, 0.08, 0.88), (0.12, 0.10, 0.14), cam)
+    box("gantry_sign", (0, 0.10, 1.12), (0.56, 0.03, 0.22), sign)
+    return "prop-gantry"
+
+
+# --------------------------------------------------------------------------- #
 # Entry point                                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -466,6 +603,13 @@ BUILDERS = [
     build_token_vest,
     build_token_megaphone,
     build_token_sneaker,
+    build_prop_robot,
+    build_prop_bulb,
+    build_prop_tap,
+    build_prop_cards_kombi,
+    build_prop_cards_citywatch,
+    build_prop_coins,
+    build_prop_gantry,
 ]
 
 

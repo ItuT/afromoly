@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls, Text, useGLTF } from '@react-three/drei';
 import { Color, MeshBasicMaterial, NoToneMapping, Vector3, type Group, type Object3D, type PerspectiveCamera } from 'three';
 import { BOARD, type ObservableState, type Tile, type TokenId } from '@afromoly/engine';
-import { MODEL_PATHS, TILE_TOP, buildingSpots, tileFootprint, tokenSpot } from '@/lib/board3d';
+import { MODEL_PATHS, TILE_TOP, buildingSpots, onTile, tileFootprint, tokenSpot } from '@/lib/board3d';
 import { rand, tileLabel } from '@/lib/display';
 
 const SEAT_HEX = ['#e0913d', '#5fa8bd', '#7fbe92', '#c9639b', '#d9b23c', '#b48ae0'];
@@ -232,7 +232,7 @@ function TileLabel({ tile, ownerColour }: { tile: Tile; ownerColour: string | nu
         anchorY="middle"
         color={ownerColour ?? INK}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, corner ? 0 : 0.4]}
+        position={[0, 0, corner ? (PROP_FOR[tile.index] ? 0.62 : 0) : 0.4]}
       >
         {corner ? shortName(tile).toUpperCase() : shortName(tile)}
       </Text>
@@ -265,6 +265,62 @@ function Labels({ state }: { state: ObservableState }) {
             key={tile.index}
             tile={tile}
             ownerColour={seat >= 0 ? SEAT_INK[seat % SEAT_INK.length] ?? null : null}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------- props */
+
+interface PropSpec {
+  url: string;
+  scale: number;
+  /** Offset in the tile's frame: along the edge, and outward from the middle. */
+  dx: number;
+  dz: number;
+  /** Extra turn on top of the tile's facing. */
+  spin?: number;
+}
+
+/**
+ * The picture on each special space. Streets carry pieces instead, so they
+ * stay clear. Props sit on the inner half of a tile, where the label is not.
+ */
+const PROP_FOR: Record<number, PropSpec> = {
+  5: { url: MODEL_PATHS.van, scale: 0.32, dx: 0, dz: -0.45, spin: Math.PI / 2 },
+  15: { url: MODEL_PATHS.van, scale: 0.32, dx: 0, dz: -0.45, spin: Math.PI / 2 },
+  25: { url: MODEL_PATHS.van, scale: 0.32, dx: 0, dz: -0.45, spin: Math.PI / 2 },
+  35: { url: MODEL_PATHS.van, scale: 0.32, dx: 0, dz: -0.45, spin: Math.PI / 2 },
+  12: { url: MODEL_PATHS.propBulb, scale: 0.6, dx: 0, dz: -0.45 },
+  28: { url: MODEL_PATHS.propTap, scale: 0.6, dx: 0, dz: -0.45 },
+  2: { url: MODEL_PATHS.propCardsKombi, scale: 0.8, dx: 0, dz: -0.42, spin: 0.25 },
+  17: { url: MODEL_PATHS.propCardsKombi, scale: 0.8, dx: 0, dz: -0.42, spin: 0.25 },
+  33: { url: MODEL_PATHS.propCardsKombi, scale: 0.8, dx: 0, dz: -0.42, spin: 0.25 },
+  7: { url: MODEL_PATHS.propCardsCitywatch, scale: 0.8, dx: 0, dz: -0.42, spin: -0.25 },
+  22: { url: MODEL_PATHS.propCardsCitywatch, scale: 0.8, dx: 0, dz: -0.42, spin: -0.25 },
+  36: { url: MODEL_PATHS.propCardsCitywatch, scale: 0.8, dx: 0, dz: -0.42, spin: -0.25 },
+  10: { url: MODEL_PATHS.propRobot, scale: 0.85, dx: -0.6, dz: -0.35, spin: 0.5 },
+  20: { url: MODEL_PATHS.propCoins, scale: 0.75, dx: 0.5, dz: -0.45 },
+  38: { url: MODEL_PATHS.propGantry, scale: 0.9, dx: 0, dz: -0.42 },
+};
+
+function Props() {
+  return (
+    <>
+      {Object.entries(PROP_FOR).map(([key, spec]) => {
+        const index = Number(key);
+        const t = tileFootprint(index);
+        const corner = index === 0 || index === 10 || index === 20 || index === 30;
+        const facing = corner ? (t.z > 0 ? Math.PI : 0) : t.facing;
+        return (
+          <Model
+            key={`prop-${index}`}
+            url={spec.url}
+            position={onTile(index, spec.dx, spec.dz)}
+            rotationY={facing + (spec.spin ?? 0)}
+            scale={spec.scale}
           />
         );
       })}
@@ -401,6 +457,7 @@ function Scene({ state }: { state: ObservableState }) {
     <>
       <primitive object={board} />
       <Well state={state} />
+      <Props />
       <Labels state={state} />
       <Pieces state={state} />
     </>

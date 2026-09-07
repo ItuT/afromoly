@@ -104,4 +104,28 @@ export const MODEL_PATHS = {
   vest: '/models/token-vest.glb',
   megaphone: '/models/token-megaphone.glb',
   sneaker: '/models/token-sneaker.glb',
+  propRobot: '/models/prop-robot.glb',
+  propBulb: '/models/prop-bulb.glb',
+  propTap: '/models/prop-tap.glb',
+  propCardsKombi: '/models/prop-cards-kombi.glb',
+  propCardsCitywatch: '/models/prop-cards-citywatch.glb',
+  propCoins: '/models/prop-coins.glb',
+  propGantry: '/models/prop-gantry.glb',
 } as const;
+
+/**
+ * Turn an offset in a tile's own frame into a board position. In tile terms
+ * +x runs along the edge and +z points outward, away from the middle of the
+ * board, which is the frame the labels are laid out in.
+ */
+export function onTile(index: number, dx: number, dz: number): [number, number, number] {
+  const t = tileFootprint(index);
+  const corner = index === 0 || index === 10 || index === 20 || index === 30;
+  const facing = corner ? (t.z > 0 ? Math.PI : 0) : t.facing;
+  const theta = facing - Math.PI;
+  return [
+    t.x + dx * Math.cos(theta) + dz * Math.sin(theta),
+    TILE_TOP,
+    t.z - dx * Math.sin(theta) + dz * Math.cos(theta),
+  ];
+}

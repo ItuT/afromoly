@@ -27,15 +27,21 @@ except ImportError:
     raise SystemExit("Install Pillow to stitch the contact sheet: pip install Pillow")
 
 names = ["board","quantum-van","terminal-depot","token-quantum","token-coin",
-         "token-robot","token-vest","token-megaphone","token-sneaker"]
+         "token-robot","token-vest","token-megaphone","token-sneaker",
+         "prop-robot","prop-bulb","prop-tap","prop-cards-kombi",
+         "prop-cards-citywatch","prop-coins","prop-gantry"]
 paths = [os.path.join("previews", f"{n}.png") for n in names]
 images = [Image.open(p).convert("RGB") for p in paths if os.path.exists(p)]
 if not images:
     raise SystemExit("No previews to stitch.")
+import math
 w, h = images[0].size
-sheet = Image.new("RGB", (w * 3, h * 3), (18, 17, 13))
+cols = 4
+rows = math.ceil(len(images) / cols)
+sheet = Image.new("RGB", (w * cols, h * rows), (18, 17, 13))
 for i, im in enumerate(images):
-    sheet.paste(im, ((i % 3) * w, (i // 3) * h))
-sheet.save(os.path.join("previews", "contact.png"))
+    sheet.paste(im, ((i % cols) * w, (i // cols) * h))
+sheet = sheet.resize((sheet.width // 2, sheet.height // 2), Image.LANCZOS)
+sheet.save(os.path.join("previews", "contact.png"), optimize=True)
 print("wrote previews/contact.png")
 PY

@@ -39,6 +39,14 @@ are ignored by git.
 | `token-vest.glb` | A car guard's hi-vis vest, folded into an A-frame |
 | `token-megaphone.glb` | The rank marshal's horn on a pedestal |
 | `token-sneaker.glb` | A low-top canvas sneaker |
+| `prop-robot.glb` | The impound lot's signal, lenses lit |
+| `prop-bulb.glb` | City Power's bare bulb |
+| `prop-tap.glb` | Joburg Water's standpipe tap |
+| `prop-cards-kombi.glb`, `prop-cards-citywatch.glb` | Card stacks on the two deck spaces, top card in the deck's colour |
+| `prop-coins.glb` | The rank pot on the Taxi Rank Queue |
+| `prop-gantry.glb` | An e-toll gantry, cameras and all |
+
+The ranks carry a small `quantum-van.glb` rather than a prop of their own.
 
 ## Keeping the board in step
 
