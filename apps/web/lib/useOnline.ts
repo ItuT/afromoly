@@ -21,11 +21,19 @@ export interface Online {
   legal: Action[];
   waitingOn: string;
   error: string | null;
+  /**
+   * Set when the server has said this seat can never be resumed: the table
+   * has expired, or the secret no longer matches. Reconnecting stops.
+   */
+  lost: string | null;
   send: (action: Action) => void;
   startGame: () => void;
 }
 
 const RETRY_MS = [500, 1_000, 2_000, 4_000, 8_000];
+
+/** Errors after which retrying the same seat cannot help. */
+const FATAL = new Set(['UNKNOWN_GAME', 'UNKNOWN_PLAYER', 'FORBIDDEN']);
 
 export function useOnline(seat: Seat): Online {
   const [connection, setConnection] = useState<Connection>('connecting');
@@ -37,6 +45,7 @@ export function useOnline(seat: Seat): Online {
     { id: 0, text: 'Connecting to the rank.', tone: 'head' },
   ]);
   const [error, setError] = useState<string | null>(null);
+  const [lost, setLost] = useState<string | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [batch, setBatch] = useState(0);
 
@@ -59,7 +68,8 @@ export function useOnline(seat: Seat): Online {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const open = () => {
-      const url = `${seat.wsUrl}?gameId=${encodeURIComponent(seat.gameId)}&playerId=${encodeURIComponent(seat.playerId)}`;
+      const query = new URLSearchParams({ gameId: seat.gameId, playerId: seat.playerId, secret: seat.secret });
+      const url = `${seat.wsUrl}?${query.toString()}`;
       const ws = new WebSocket(url);
       socket.current = ws;
       setConnection('connecting');
@@ -74,6 +84,7 @@ export function useOnline(seat: Seat): Online {
             type: 'subscribe',
             gameId: seat.gameId,
             playerId: seat.playerId,
+            secret: seat.secret,
           }),
         );
       };
@@ -112,14 +123,24 @@ export function useOnline(seat: Seat): Online {
           case 'error':
             setError(message.message);
             append([{ id: nextLogId.current++, text: message.message, tone: 'bad' }]);
+            if (FATAL.has(message.code)) {
+              setLost(message.message);
+              closedByUs.current = true;
+              ws.close();
+            }
             break;
           default:
             break;
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event: CloseEvent) => {
         setConnection('closed');
+        // The local server refuses a bad seat with 4003 instead of a message.
+        if (event.code === 4003) {
+          setLost(event.reason || 'That seat is not yours.');
+          closedByUs.current = true;
+        }
         if (closedByUs.current) return;
         const wait = RETRY_MS[Math.min(attempt.current, RETRY_MS.length - 1)] ?? 8_000;
         attempt.current += 1;
@@ -136,7 +157,7 @@ export function useOnline(seat: Seat): Online {
       socket.current?.close();
       socket.current = null;
     };
-  }, [seat.gameId, seat.playerId, seat.wsUrl, append]);
+  }, [seat.gameId, seat.playerId, seat.secret, seat.wsUrl, append]);
 
   const post = useCallback((message: unknown) => {
     const ws = socket.current;
@@ -188,6 +209,7 @@ export function useOnline(seat: Seat): Online {
     legal,
     waitingOn,
     error,
+    lost,
     send,
     startGame,
   };

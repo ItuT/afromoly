@@ -20,6 +20,24 @@ export function Online({ seat, onLeave }: { seat: Seat; onLeave: () => void }) {
   const isHost = table.hostId === seat.playerId;
   useSounds(table.events, table.batch);
 
+  if (table.lost) {
+    return (
+      <main className="setup">
+        <h1>
+          Table <span className="mono" style={{ letterSpacing: '0.08em', color: 'var(--ochre)' }}>{table.code}</span>
+          <small>This seat cannot be taken up again.</small>
+        </h1>
+        <div className="prompt" style={{ borderLeftColor: 'var(--warn)' }}>
+          <strong>{table.lost}</strong>
+          Tables close a day after their last move, and a seat only answers to the browser that took it.
+        </div>
+        <div className="row">
+          <button className="primary" onClick={onLeave}>Back to the rank</button>
+        </div>
+      </main>
+    );
+  }
+
   if (!table.state) {
     return (
       <main className="setup">

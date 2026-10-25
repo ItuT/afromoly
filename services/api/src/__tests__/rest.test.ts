@@ -38,10 +38,12 @@ describe('the REST routes', () => {
     const table = json(created);
     expect(table.playerId).toBe('p1');
     expect(String(table.code)).toHaveLength(6);
+    expect(String(table.secret).length).toBeGreaterThanOrEqual(16);
 
     const joined = await handler(request('POST', '/games/join', { code: table.code, name: 'Naledi' }));
     expect(status(joined)).toBe(200);
     expect(json(joined).playerId).toBe('p2');
+    expect(json(joined).secret).not.toBe(table.secret);
 
     const lobby = await handler(request('GET', `/games/${String(table.gameId)}`));
     expect(status(lobby)).toBe(200);

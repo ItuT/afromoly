@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { TOKENS, TOKEN_NAMES, type PlayerSetup } from '@afromoly/engine';
+import { useEffect, useState } from 'react';
+import { TOKENS, TOKEN_NAMES, tileAt, type PlayerSetup } from '@afromoly/engine';
 import { Game } from '@/components/Game';
 import { Online } from '@/components/Online';
 import { hostTable, joinTable, type Seat } from '@/lib/api';
 import { useRuntimeConfig } from '@/lib/useConfig';
+import { clearHotSeat, clearSeat, loadHotSeat, loadSeat, saveSeat, type HotSeatSave } from '@/lib/storage';
+import type { HotSeatSnapshot } from '@/lib/useGame';
 
 const DEFAULT_NAMES = ['Thabo', 'Naledi', 'Sipho', 'Zanele', 'Kagiso', 'Lerato'];
 
@@ -17,7 +19,7 @@ export default function Home() {
   const [seatCount, setSeatCount] = useState(3);
   const [names, setNames] = useState<string[]>(DEFAULT_NAMES);
   const [jackpot, setJackpot] = useState(true);
-  const [hotSeat, setHotSeat] = useState<{ seats: PlayerSetup[]; seed: string } | null>(null);
+  const [hotSeat, setHotSeat] = useState<{ seats: PlayerSetup[]; seed: string; resume: HotSeatSnapshot | null } | null>(null);
 
   const [myName, setMyName] = useState('');
   const [code, setCode] = useState('');
@@ -25,19 +27,39 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // What an earlier visit left behind. Read after mount, since the server
+  // rendering this page has no localStorage to look in.
+  const [savedSeat, setSavedSeat] = useState<Seat | null>(null);
+  const [savedHotSeat, setSavedHotSeat] = useState<HotSeatSave | null>(null);
+  useEffect(() => {
+    setSavedSeat(loadSeat());
+    setSavedHotSeat(loadHotSeat());
+  }, []);
+
   if (mode === 'hotseat' && hotSeat) {
     return (
       <Game
         seats={hotSeat.seats}
         seed={hotSeat.seed}
         jackpot={jackpot}
-        onQuit={() => { setHotSeat(null); setMode('menu'); }}
+        resume={hotSeat.resume}
+        onQuit={() => { setHotSeat(null); setSavedHotSeat(null); setMode('menu'); }}
       />
     );
   }
 
   if (mode === 'online' && seat) {
-    return <Online seat={seat} onLeave={() => { setSeat(null); setMode('menu'); }} />;
+    return (
+      <Online
+        seat={seat}
+        onLeave={() => {
+          clearSeat();
+          setSavedSeat(null);
+          setSeat(null);
+          setMode('menu');
+        }}
+      />
+    );
   }
 
   const setName = (i: number, value: string) =>
@@ -47,7 +69,10 @@ export default function Home() {
     setBusy(true);
     setError(null);
     try {
-      setSeat(await work());
+      const taken = await work();
+      saveSeat(taken);
+      setSavedSeat(taken);
+      setSeat(taken);
       setMode('online');
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : 'That did not work.');
@@ -102,6 +127,7 @@ export default function Home() {
           <button
             className="primary"
             onClick={() => {
+              clearHotSeat();
               setHotSeat({
                 seats: Array.from({ length: seatCount }, (_, i) => ({
                   id: `p${i + 1}`,
@@ -109,6 +135,7 @@ export default function Home() {
                   token: TOKENS[i] ?? 'quantum',
                 })),
                 seed: `jozi-${Date.now()}`,
+                resume: null,
               });
               setMode('hotseat');
             }}
@@ -130,6 +157,55 @@ export default function Home() {
           fleets out of the ranks, and squeeze every rival off the board.
         </small>
       </h1>
+
+      {savedHotSeat && (
+        <div className="panel">
+          <h2>Carry on</h2>
+          <p className="muted" style={{ margin: '0 0 12px', fontSize: 13.5 }}>
+            {savedHotSeat.seats.map((s) => s.name).join(', ')} at turn {savedHotSeat.snapshot.state.turnNumber},{' '}
+            {savedHotSeat.snapshot.state.players[savedHotSeat.snapshot.state.currentPlayerIndex]?.name ?? 'someone'} to play from{' '}
+            {tileAt(savedHotSeat.snapshot.state.players[savedHotSeat.snapshot.state.currentPlayerIndex]?.position ?? 0).name}.
+          </p>
+          <div className="row">
+            <button
+              className="primary"
+              onClick={() => {
+                setJackpot(savedHotSeat.jackpot);
+                setHotSeat({ seats: savedHotSeat.seats, seed: savedHotSeat.seed, resume: savedHotSeat.snapshot });
+                setMode('hotseat');
+              }}
+            >
+              Continue hot seat
+            </button>
+            <button onClick={() => { clearHotSeat(); setSavedHotSeat(null); }}>Forget it</button>
+          </div>
+        </div>
+      )}
+
+      {savedSeat && online && (
+        <div className="panel">
+          <h2>Back to your table</h2>
+          <p className="muted" style={{ margin: '0 0 12px', fontSize: 13.5 }}>
+            You hold a seat as <strong>{savedSeat.name}</strong> at table{' '}
+            <span className="mono" style={{ letterSpacing: '0.08em' }}>{savedSeat.code}</span>.
+          </p>
+          <div className="row">
+            <button
+              className="primary"
+              onClick={() => {
+                // The socket address comes from this deployment, not the saved one.
+                const resumed = { ...savedSeat, wsUrl: config.wsUrl };
+                saveSeat(resumed);
+                setSeat(resumed);
+                setMode('online');
+              }}
+            >
+              Rejoin table {savedSeat.code}
+            </button>
+            <button onClick={() => { clearSeat(); setSavedSeat(null); }}>Forget it</button>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <h2>One screen</h2>

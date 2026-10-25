@@ -93,18 +93,26 @@ export class DynamoStore implements Store {
     }
   }
 
-  async addPlayer(player: PlayerRecord): Promise<void> {
-    await this.doc.send(
-      new PutCommand({
-        TableName: this.table,
-        Item: {
-          ...player,
-          PK: gamePk(player.gameId),
-          SK: `PLAYER#${player.playerId}`,
-          expiresAt: ttlFrom(Date.now(), 'playing'),
-        },
-      }),
-    );
+  async addPlayer(player: PlayerRecord): Promise<boolean> {
+    try {
+      await this.doc.send(
+        new PutCommand({
+          TableName: this.table,
+          Item: {
+            ...player,
+            PK: gamePk(player.gameId),
+            SK: `PLAYER#${player.playerId}`,
+            expiresAt: ttlFrom(Date.now(), 'seat'),
+          },
+          // Two people joining in the same instant must not share a seat.
+          ConditionExpression: 'attribute_not_exists(PK)',
+        }),
+      );
+      return true;
+    } catch (error) {
+      if ((error as { name?: string }).name === 'ConditionalCheckFailedException') return false;
+      throw error;
+    }
   }
 
   async listPlayers(gameId: string): Promise<PlayerRecord[]> {

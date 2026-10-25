@@ -27,6 +27,12 @@ async function seatedTable(names = ['Thabo', 'Naledi']) {
   return game;
 }
 
+async function secretOf(gameId: string, playerId: string): Promise<string> {
+  const seat = (await store.listPlayers(gameId)).find((s) => s.playerId === playerId);
+  if (!seat) throw new Error(`no seat ${playerId}`);
+  return seat.secret;
+}
+
 async function connectAll(gameId: string, playerIds: string[]) {
   for (const playerId of playerIds) {
     await handleClientMessage(store, bus, `conn-${playerId}`, {
@@ -34,6 +40,7 @@ async function connectAll(gameId: string, playerIds: string[]) {
       type: 'subscribe',
       gameId,
       playerId,
+      secret: await secretOf(gameId, playerId),
     });
   }
   bus.clear();
@@ -110,6 +117,7 @@ describe('connections', () => {
     // p2 reconnects on a new socket, then the old one finally reports closed.
     await handleClientMessage(store, bus, 'conn-p2-new', {
       v: PROTOCOL_VERSION, type: 'subscribe', gameId: game.gameId, playerId: 'p2',
+      secret: await secretOf(game.gameId, 'p2'),
     });
     await handleDisconnect(store, bus, 'conn-p2');
     const seats = await store.listPlayers(game.gameId);
@@ -119,9 +127,59 @@ describe('connections', () => {
   it('turns away a subscribe for a seat that does not exist', async () => {
     const game = await seatedTable();
     const reply = await handleClientMessage(store, bus, 'conn-x', {
-      v: PROTOCOL_VERSION, type: 'subscribe', gameId: game.gameId, playerId: 'p9',
+      v: PROTOCOL_VERSION, type: 'subscribe', gameId: game.gameId, playerId: 'p9', secret: 'whatever',
     });
     expect(reply).toMatchObject({ type: 'error', code: 'UNKNOWN_PLAYER' });
+  });
+
+  it('turns away a subscribe without the seat secret', async () => {
+    const game = await seatedTable();
+    const reply = await handleClientMessage(store, bus, 'conn-x', {
+      v: PROTOCOL_VERSION, type: 'subscribe', gameId: game.gameId, playerId: 'p2', secret: 'guess',
+    });
+    expect(reply).toMatchObject({ type: 'error', code: 'FORBIDDEN' });
+    const seats = await store.listPlayers(game.gameId);
+    expect(seats.find((s) => s.playerId === 'p2')?.connectionId).toBeNull();
+    expect(await store.getConnection('conn-x')).toBeNull();
+  });
+
+  it('will not let one seat take over another seat\'s socket', async () => {
+    const game = await seatedTable();
+    await connectAll(game.gameId, ['p1', 'p2']);
+    const reply = await handleClientMessage(store, bus, 'conn-p2', {
+      v: PROTOCOL_VERSION, type: 'subscribe', gameId: game.gameId, playerId: 'p1',
+      secret: await secretOf(game.gameId, 'p2'),
+    });
+    expect(reply).toMatchObject({ type: 'error', code: 'FORBIDDEN' });
+    const seats = await store.listPlayers(game.gameId);
+    expect(seats.map((s) => s.connectionId)).toEqual(['conn-p1', 'conn-p2']);
+  });
+
+  it('gives simultaneous joiners different seats', async () => {
+    const game = await seatedTable(['Thabo']);
+    const [a, b, c] = await Promise.all([
+      joinTable(store, game.code, 'Naledi'),
+      joinTable(store, game.code, 'Sipho'),
+      joinTable(store, game.code, 'Zanele'),
+    ]);
+    expect([a, b, c].every((r) => r.ok)).toBe(true);
+    const seats = await store.listPlayers(game.gameId);
+    expect(seats.map((s) => s.playerId)).toEqual(['p1', 'p2', 'p3', 'p4']);
+    expect(new Set(seats.map((s) => s.secret)).size).toBe(4);
+  });
+
+  it('never broadcasts a seat secret', async () => {
+    const game = await seatedTable();
+    await startTable(store, game.gameId, 'p1');
+    await connectAll(game.gameId, ['p1', 'p2']);
+    await handleClientMessage(store, bus, 'conn-p1', {
+      v: PROTOCOL_VERSION, type: 'intent', gameId: game.gameId, playerId: 'p1',
+      expectedVersion: 2, nonce: 'n-1', intent: { kind: 'rollDice', playerId: 'p1' },
+    });
+    const secrets = (await store.listPlayers(game.gameId)).map((s) => s.secret);
+    const wire = JSON.stringify(bus.sent);
+    for (const secret of secrets) expect(wire).not.toContain(secret);
+    expect(wire).not.toContain('"secret"');
   });
 });
 
@@ -166,6 +224,42 @@ describe('playing a turn over the wire', () => {
     expect(wire).not.toContain('"rng"');
     expect(wire).not.toContain('"order"');
     expect(state?.state.decks).toEqual({ kombi: { remaining: 16 }, citywatch: { remaining: 16 } });
+  });
+
+  it('refuses an intent from a socket subscribed as somebody else', async () => {
+    const game = await seatedTable();
+    await startTable(store, game.gameId, 'p1');
+    await connectAll(game.gameId, ['p1', 'p2']);
+    const before = await store.getGame(game.gameId);
+    // p2's socket claims to be p1, on p1's turn.
+    const reply = await handleClientMessage(store, bus, 'conn-p2', {
+      v: PROTOCOL_VERSION, type: 'intent', gameId: game.gameId, playerId: 'p1',
+      expectedVersion: 2, nonce: 'n-1', intent: { kind: 'rollDice', playerId: 'p1' },
+    });
+    expect(reply).toMatchObject({ type: 'error', code: 'FORBIDDEN' });
+    const after = await store.getGame(game.gameId);
+    expect(after?.version).toBe(before?.version);
+    expect(bus.sent).toEqual([]);
+  });
+
+  it('refuses an intent from a socket that never subscribed', async () => {
+    const game = await seatedTable();
+    await startTable(store, game.gameId, 'p1');
+    const reply = await handleClientMessage(store, bus, 'conn-stranger', {
+      v: PROTOCOL_VERSION, type: 'intent', gameId: game.gameId, playerId: 'p1',
+      expectedVersion: 2, nonce: 'n-1', intent: { kind: 'rollDice', playerId: 'p1' },
+    });
+    expect(reply).toMatchObject({ type: 'error', code: 'NOT_SUBSCRIBED' });
+  });
+
+  it('only lets the host start, judged by the socket rather than the message', async () => {
+    const game = await seatedTable();
+    await connectAll(game.gameId, ['p1', 'p2']);
+    const reply = await handleClientMessage(store, bus, 'conn-p2', {
+      v: PROTOCOL_VERSION, type: 'startGame', gameId: game.gameId, playerId: 'p1',
+    });
+    expect(reply).toMatchObject({ type: 'error', code: 'FORBIDDEN' });
+    expect((await store.getGame(game.gameId))?.status).toBe('lobby');
   });
 
   it('refuses an intent sent on behalf of somebody else', async () => {

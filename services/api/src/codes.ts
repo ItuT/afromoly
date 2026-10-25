@@ -6,7 +6,7 @@
  * the caller.
  */
 
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -18,6 +18,11 @@ export function makeCode(length = 6): string {
 
 export function makeId(): string {
   return randomUUID();
+}
+
+/** An unguessable token proving ownership of a seat. */
+export function makeSecret(): string {
+  return randomBytes(18).toString('base64url');
 }
 
 export function normaliseCode(input: string): string {

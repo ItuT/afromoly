@@ -9,7 +9,7 @@
 import { PROTOCOL_VERSION, redact, type ClientMessage, type LobbyPlayer, type ServerMessage } from '@afromoly/protocol';
 import { broadcast, type Broadcaster } from './broadcast.js';
 import { applyIntent } from './session.js';
-import { startTable } from './lobby.js';
+import { authenticateSeat, startTable } from './lobby.js';
 import type { Store } from './store.js';
 
 export async function lobbyMessage(store: Store, gameId: string): Promise<ServerMessage | null> {
@@ -82,26 +82,39 @@ export async function handleClientMessage(
   if (message.type === 'ping') return { v: PROTOCOL_VERSION, type: 'pong' };
 
   if (message.type === 'subscribe') {
-    const seats = await store.listPlayers(message.gameId);
-    const seat = seats.find((s) => s.playerId === message.playerId);
-    if (!seat) return { v: PROTOCOL_VERSION, type: 'error', code: 'UNKNOWN_PLAYER', message: 'You are not seated at this table.' };
+    const seat = await authenticateSeat(store, message.gameId, message.playerId, String(message.secret ?? ''));
+    if (!seat.ok) return { v: PROTOCOL_VERSION, type: 'error', code: seat.code, message: seat.message };
     await store.setConnection(message.gameId, message.playerId, connectionId);
     await store.putConnection({ connectionId, gameId: message.gameId, playerId: message.playerId });
     await pushTable(store, broadcaster, message.gameId);
     return null;
   }
 
+  // Everything below acts for a seat, and the seat is whichever one this
+  // socket subscribed as. The ids in the message are checked against that
+  // record rather than trusted, so no client can act for another operator.
+  const record = await store.getConnection(connectionId);
+  if (!record) {
+    return { v: PROTOCOL_VERSION, type: 'error', code: 'NOT_SUBSCRIBED', message: 'Subscribe to a table first.' };
+  }
+  if (message.type === 'startGame' || message.type === 'intent') {
+    if (message.gameId !== record.gameId || message.playerId !== record.playerId) {
+      return { v: PROTOCOL_VERSION, type: 'error', code: 'FORBIDDEN', message: 'You cannot act for another operator.' };
+    }
+  }
+  const { gameId, playerId } = record;
+
   if (message.type === 'startGame') {
-    const result = await startTable(store, message.gameId, message.playerId);
+    const result = await startTable(store, gameId, playerId);
     if (!result.ok) return { v: PROTOCOL_VERSION, type: 'error', code: result.code, message: result.message };
-    await pushTable(store, broadcaster, message.gameId);
+    await pushTable(store, broadcaster, gameId);
     return null;
   }
 
   if (message.type === 'intent') {
     const result = await applyIntent(store, {
-      gameId: message.gameId,
-      playerId: message.playerId,
+      gameId,
+      playerId,
       expectedVersion: message.expectedVersion,
       nonce: message.nonce,
       intent: message.intent,
@@ -110,21 +123,21 @@ export async function handleClientMessage(
     if (!result.ok) {
       // A stale or conflicting client needs the truth, not just an error.
       if (result.code === 'STALE_VERSION' || result.code === 'CONFLICT') {
-        const state = await stateMessage(store, message.gameId, message.playerId);
+        const state = await stateMessage(store, gameId, playerId);
         if (state) await broadcaster.send(connectionId, state);
       }
       return { v: PROTOCOL_VERSION, type: 'error', code: result.code, message: result.message };
     }
 
     if (!result.value.replayed && result.value.events.length > 0) {
-      await broadcast(store, broadcaster, message.gameId, () => ({
+      await broadcast(store, broadcaster, gameId, () => ({
         v: PROTOCOL_VERSION,
         type: 'events',
-        gameId: message.gameId,
+        gameId,
         events: result.value.events,
       }));
     }
-    await pushTable(store, broadcaster, message.gameId);
+    await pushTable(store, broadcaster, gameId);
     return null;
   }
 

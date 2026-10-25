@@ -176,7 +176,7 @@ browsers will not start audio before then.
 ## The server
 
 `services/api` is server-authoritative. Clients send intents; the engine runs
-on the server and the result is broadcast. Three things make that safe:
+on the server and the result is broadcast. Four things make that safe:
 
 - **The state a client receives is redacted.** The shuffled deck order and the
   generator state never leave the server, so nobody can read the next card or
@@ -185,13 +185,22 @@ on the server and the result is broadcast. Three things make that safe:
   cannot both land. The loser is told to resync and is handed the current state.
 - **Every intent carries a nonce**, so a retried send after a dropped socket
   replays as the move it already made rather than applying twice.
+- **Every seat has a secret.** Creating or joining a table returns an
+  unguessable token that only that browser holds. A socket must present it to
+  subscribe, and from then on the server acts only for the seat the socket
+  subscribed as, whatever ids a message claims. Two people joining in the same
+  instant cannot share a seat either: the seat write is conditional.
+
+The client keeps the seat, secret included, in localStorage, so a refresh or a
+closed tab offers "Rejoin table" rather than losing the game. Hot-seat games
+are saved after every move for the same reason.
 
 Seats, connections, the game and its action log all live in one DynamoDB table
 with a TTL, keyed as described in [PLAN.md](PLAN.md#4-dynamodb-key-design).
 
 ## Testing
 
-159 tests: 115 over the engine, 26 over the server, and 18 over the client's
+174 tests: 123 over the engine, 33 over the server, and 18 over the client's
 board geometry and sound. Every cell of the Readme's rent table is asserted against an
 independently transcribed fixture, so a typo in the board data fails rather than agreeing with
 itself. Beyond that: both bankruptcy routes, all three impound exits, the even-build rule in

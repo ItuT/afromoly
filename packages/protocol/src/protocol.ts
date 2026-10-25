@@ -7,7 +7,7 @@
 
 import type { Action, GameState, GameEvent, TokenId } from '@afromoly/engine';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** What the client sends. */
 export type ClientMessage =
@@ -22,7 +22,15 @@ export type ClientMessage =
       nonce: string;
       intent: Action;
     }
-  | { v: number; type: 'subscribe'; gameId: string; playerId: string }
+  /**
+   * Binds this socket to a seat. The secret was issued when the seat was
+   * created or joined; without it the server will not accept the claim.
+   */
+  | { v: number; type: 'subscribe'; gameId: string; playerId: string; secret: string }
+  /**
+   * startGame and intent name the seat they act for, but the server only
+   * honours them when that matches the seat the socket subscribed as.
+   */
   | { v: number; type: 'startGame'; gameId: string; playerId: string }
   | { v: number; type: 'ping' };
 
@@ -38,6 +46,10 @@ export type ServerErrorCode =
   | 'BAD_MESSAGE'
   | 'UNKNOWN_GAME'
   | 'UNKNOWN_PLAYER'
+  /** The seat exists but the secret presented does not belong to it. */
+  | 'FORBIDDEN'
+  /** The socket has not subscribed, so there is no seat to act for. */
+  | 'NOT_SUBSCRIBED'
   | 'NOT_STARTED'
   | 'ALREADY_STARTED'
   | 'GAME_FULL'

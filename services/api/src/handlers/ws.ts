@@ -10,6 +10,7 @@ import { ApiGatewayBroadcaster, type Broadcaster } from '../broadcast.js';
 import { DynamoStore } from '../dynamoStore.js';
 import { PROTOCOL_VERSION, type ClientMessage } from '@afromoly/protocol';
 import { handleClientMessage, handleDisconnect, pushTable } from '../service.js';
+import { authenticateSeat } from '../lobby.js';
 import type { Store } from '../store.js';
 
 let cachedStore: Store | null = null;
@@ -47,15 +48,16 @@ interface ConnectEvent extends APIGatewayProxyWebsocketEventV2 {
 export async function connect(event: ConnectEvent): Promise<APIGatewayProxyResultV2> {
   const gameId = event.queryStringParameters?.gameId;
   const playerId = event.queryStringParameters?.playerId;
+  const secret = event.queryStringParameters?.secret;
   const connectionId = event.requestContext.connectionId;
-  if (!gameId || !playerId) {
-    return { statusCode: 400, body: 'gameId and playerId are required' };
+  if (!gameId || !playerId || !secret) {
+    return { statusCode: 400, body: 'gameId, playerId and secret are required' };
   }
   try {
     const db = store();
-    const seats = await db.listPlayers(gameId);
-    if (!seats.some((s) => s.playerId === playerId)) {
-      return { statusCode: 403, body: 'not seated at this table' };
+    const seat = await authenticateSeat(db, gameId, playerId, secret);
+    if (!seat.ok) {
+      return { statusCode: 403, body: seat.message };
     }
     await db.putConnection({ connectionId, gameId, playerId });
     await db.setConnection(gameId, playerId, connectionId);

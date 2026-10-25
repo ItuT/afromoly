@@ -21,8 +21,17 @@ export interface LogLine {
   tone: 'plain' | 'head' | 'good' | 'bad' | 'card';
 }
 
+/** Enough to carry a hot-seat game across a refresh. */
+export interface HotSeatSnapshot {
+  state: GameState;
+  log: LogLine[];
+  nextId: number;
+}
+
 export interface HotSeat {
   state: GameState;
+  /** The current game and log, for saving. Stable between moves. */
+  snapshot: HotSeatSnapshot;
   log: LogLine[];
   /** The events from the last applied action, for the scene to act out. */
   events: GameEvent[];
@@ -150,20 +159,29 @@ export function useHotSeat(
   seats: PlayerSetup[],
   seed: string,
   options: Partial<GameOptions>,
+  resume: HotSeatSnapshot | null = null,
 ): HotSeat {
   const [shell, send] = useReducer(
     shellReducer,
     null,
-    () => makeShell(createGame(seats, seed, options), 'The rank is open. Roll to begin.'),
+    () =>
+      resume
+        ? { state: resume.state, log: resume.log, nextId: resume.nextId, events: [], batch: 0 }
+        : makeShell(createGame(seats, seed, options), 'The rank is open. Roll to begin.'),
   );
   const dispatch = useCallback((action: Action) => send(action), []);
 
   const waitingOn = waitingSeat(shell.state);
   const legal = useMemo(() => legalActions(shell.state, waitingOn), [shell.state, waitingOn]);
   const can = useCallback((kind: ActionKind) => legal.some((a) => a.kind === kind), [legal]);
+  const snapshot = useMemo<HotSeatSnapshot>(
+    () => ({ state: shell.state, log: shell.log, nextId: shell.nextId }),
+    [shell.state, shell.log, shell.nextId],
+  );
 
   return {
     state: shell.state,
+    snapshot,
     log: shell.log,
     events: shell.events,
     batch: shell.batch,

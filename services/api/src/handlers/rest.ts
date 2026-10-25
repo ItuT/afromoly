@@ -70,6 +70,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         code: result.value.game.code,
         playerId: result.value.player.playerId,
         name: result.value.player.name,
+        secret: result.value.player.secret,
       });
     }
 
@@ -84,6 +85,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         code: result.value.game.code,
         playerId: result.value.player.playerId,
         name: result.value.player.name,
+        secret: result.value.player.secret,
       });
     }
 

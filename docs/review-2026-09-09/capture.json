@@ -1,0 +1,793 @@
+{
+  "setup": {
+    "viewport": 443,
+    "scrollWidth": 443,
+    "rows": [
+      {
+        "width": 346,
+        "scrollWidth": 421
+      },
+      {
+        "width": 346,
+        "scrollWidth": 421
+      },
+      {
+        "width": 346,
+        "scrollWidth": 421
+      }
+    ]
+  },
+  "dimensions": [
+    {
+      "viewport": [
+        320,
+        740
+      ],
+      "documentWidth": 320,
+      "board": {
+        "x": 12,
+        "y": 91,
+        "width": 296,
+        "height": 296
+      },
+      "roll": {
+        "x": 27,
+        "y": 750.09375,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "6.5px",
+      "priceSize": "6px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 148.15625,
+          "y": 59,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 196.609375,
+          "y": 59,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 248.28125,
+          "y": 59,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 27,
+          "y": 750.09375,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 27,
+          "y": 798.09375,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 27,
+          "y": 1103.484375,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 108.453125,
+          "y": 1103.484375,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "board": {
+        "x": 12,
+        "y": 91,
+        "width": 366,
+        "height": 366
+      },
+      "roll": {
+        "x": 27,
+        "y": 775,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "6.5px",
+      "priceSize": "6px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 218.15625,
+          "y": 59,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 266.609375,
+          "y": 59,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 318.28125,
+          "y": 59,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 27,
+          "y": 775,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 27,
+          "y": 823,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 27,
+          "y": 1128.390625,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 108.453125,
+          "y": 1128.390625,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        430,
+        932
+      ],
+      "documentWidth": 430,
+      "board": {
+        "x": 12,
+        "y": 72,
+        "width": 406,
+        "height": 406
+      },
+      "roll": {
+        "x": 27,
+        "y": 796,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "6.5px",
+      "priceSize": "6px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 258.15625,
+          "y": 40,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 306.609375,
+          "y": 40,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 358.28125,
+          "y": 40,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 27,
+          "y": 796,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 27,
+          "y": 844,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 27,
+          "y": 1149.390625,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 108.453125,
+          "y": 1149.390625,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        720,
+        900
+      ],
+      "documentWidth": 720,
+      "board": {
+        "x": 12,
+        "y": 46,
+        "width": 696,
+        "height": 696
+      },
+      "roll": {
+        "x": 27,
+        "y": 1060,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "6.5px",
+      "priceSize": "6px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 548.15625,
+          "y": 14,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 596.609375,
+          "y": 14,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 648.28125,
+          "y": 14,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 27,
+          "y": 1060,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 27,
+          "y": 1108,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 27,
+          "y": 1413.390625,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 108.453125,
+          "y": 1413.390625,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        721,
+        900
+      ],
+      "documentWidth": 721,
+      "board": {
+        "x": 10.5,
+        "y": 56,
+        "width": 700,
+        "height": 700
+      },
+      "roll": {
+        "x": 33,
+        "y": 1080,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 541.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 589.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 643.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 33,
+          "y": 1080,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 33,
+          "y": 1128,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 33,
+          "y": 1352,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 114.453125,
+          "y": 1352,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "documentWidth": 768,
+      "board": {
+        "x": 18,
+        "y": 56,
+        "width": 732,
+        "height": 732
+      },
+      "roll": {
+        "x": 33,
+        "y": 1112,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 588.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 636.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 690.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 33,
+          "y": 1112,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 33,
+          "y": 1160,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 33,
+          "y": 1384,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 114.453125,
+          "y": 1384,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "documentWidth": 1024,
+      "board": {
+        "x": 162,
+        "y": 56,
+        "width": 700,
+        "height": 700
+      },
+      "roll": {
+        "x": 33,
+        "y": 1080,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 844.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 892.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 946.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 33,
+          "y": 1080,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 33,
+          "y": 1128,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 33,
+          "y": 1352,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 114.453125,
+          "y": 1352,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        1180,
+        820
+      ],
+      "documentWidth": 1180,
+      "board": {
+        "x": 239,
+        "y": 56,
+        "width": 702,
+        "height": 702
+      },
+      "roll": {
+        "x": 33,
+        "y": 1082,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 1000.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 1048.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 1102.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 33,
+          "y": 1082,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 33,
+          "y": 1130,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 33,
+          "y": 1354,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 114.453125,
+          "y": 1354,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        1181,
+        820
+      ],
+      "documentWidth": 1181,
+      "board": {
+        "x": 40.5,
+        "y": 56,
+        "width": 702,
+        "height": 702
+      },
+      "roll": {
+        "x": 798,
+        "y": 324,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 603.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 651.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 705.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 798,
+          "y": 324,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 798,
+          "y": 372,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 798,
+          "y": 596,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 879.453125,
+          "y": 596,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "board": {
+        "x": 130,
+        "y": 56,
+        "width": 782,
+        "height": 782
+      },
+      "roll": {
+        "x": 1057,
+        "y": 324,
+        "width": 110.3125,
+        "height": 32
+      },
+      "labelSize": "10px",
+      "priceSize": "9.5px",
+      "buttons": [
+        {
+          "text": "Flat",
+          "x": 862.15625,
+          "y": 20,
+          "width": 44.453125,
+          "height": 24
+        },
+        {
+          "text": "3D",
+          "x": 910.609375,
+          "y": 20,
+          "width": 39.671875,
+          "height": 24
+        },
+        {
+          "text": "Sound",
+          "x": 964.28125,
+          "y": 20,
+          "width": 59.71875,
+          "height": 24
+        },
+        {
+          "text": "Roll the dice",
+          "x": 1057,
+          "y": 324,
+          "width": 110.3125,
+          "height": 32
+        },
+        {
+          "text": "Open deal maker",
+          "x": 1057,
+          "y": 372,
+          "width": 140.375,
+          "height": 32
+        },
+        {
+          "text": "Restart",
+          "x": 1057,
+          "y": 596,
+          "width": 75.453125,
+          "height": 32
+        },
+        {
+          "text": "Leave table",
+          "x": 1138.453125,
+          "y": 596,
+          "width": 103.3125,
+          "height": 32
+        }
+      ]
+    }
+  ],
+  "tradeText": "Afromoly\nJOHANNESBURG EDITION · HOT SEAT · TURN 1\nFlat\n3D\nSound\nMONTH-END PAYDAY\n1\n2\n3\nFerreirasdorp\nR6 000\nKombi Hustle\nMarshalltown\nR6 000\nSARS Road Tax\nR20 000 or 10%\nBree Taxi Rank (Lilian Ngoyi)\nR20 000\nDiepkloof\nR10 000\nCity Watch\nOrlando Towers\nR10 000\nVilakazi Street\nR12 000\nJMPD IMPOUND LOT\nNewtown Cultural Precinct\nR14 000\nCity Power\nR15 000\nBraamfontein (Juta St)\nR14 000\nMaboneng (Fox St)\nR16 000\nPark Station\nR20 000\nYeoville (Rockey St)\nR18 000\nKombi Hustle\nHillbrow\nR18 000\nJeppestown\nR20 000\nTAXI RANK QUEUE\nMelville (7th Street)\nR22 000\nCity Watch\nParkhurst (4th Avenue)\nR22 000\nRosebank (Oxford Rd)\nR24 000\nNoord Taxi Rank (MTN Rank)\nR20 000\nFourways (Winnie Mandela)\nR26 000\nMidrand (Allandale)\nR26 000\nJoburg Water\nR15 000\nWaterfall City\nR28 000\nGO TO IMPOUND\nHoughton Estate\nR30 000\nSaxonwold\nR30 000\nKombi Hustle\nHyde Park\nR32 000\nSandton Gautrain Station\nR20 000\nCity Watch\nAlice Lane\nR35 000\ne-Toll / Gantry Clearance\nR10 000\nSandton CBD (Rivonia Rd)\nR40 000\nAFROMOLY\nJOHANNESBURG EDITION\nRank pot: R0\nThe rank is open. Roll to begin.\nThabo offers a deal to Naledi.\nOPERATORS\n1\nThabo\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\n2\nNaledi\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\n3\nSipho\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\nYOUR MOVE\nOffer on the table\nNaledi must accept or decline.\nAccept the deal\nDecline\nNALEDI\n\nNo deeds yet.\n\nTABLE\nSeed jozi-1788922415301\nJackpot rule on\nRestart\nLeave table",
+  "rolledText": "Afromoly\nJOHANNESBURG EDITION · HOT SEAT · TURN 1\nFlat\n3D\nSound\nMONTH-END PAYDAY\n2\n3\nFerreirasdorp\nR6 000\nKombi Hustle\nMarshalltown\nR6 000\nSARS Road Tax\nR20 000 or 10%\nBree Taxi Rank (Lilian Ngoyi)\nR20 000\n1\nDiepkloof\nR10 000\nCity Watch\nOrlando Towers\nR10 000\nVilakazi Street\nR12 000\nJMPD IMPOUND LOT\nNewtown Cultural Precinct\nR14 000\nCity Power\nR15 000\nBraamfontein (Juta St)\nR14 000\nMaboneng (Fox St)\nR16 000\nPark Station\nR20 000\nYeoville (Rockey St)\nR18 000\nKombi Hustle\nHillbrow\nR18 000\nJeppestown\nR20 000\nTAXI RANK QUEUE\nMelville (7th Street)\nR22 000\nCity Watch\nParkhurst (4th Avenue)\nR22 000\nRosebank (Oxford Rd)\nR24 000\nNoord Taxi Rank (MTN Rank)\nR20 000\nFourways (Winnie Mandela)\nR26 000\nMidrand (Allandale)\nR26 000\nJoburg Water\nR15 000\nWaterfall City\nR28 000\nGO TO IMPOUND\nHoughton Estate\nR30 000\nSaxonwold\nR30 000\nKombi Hustle\nHyde Park\nR32 000\nSandton Gautrain Station\nR20 000\nCity Watch\nAlice Lane\nR35 000\ne-Toll / Gantry Clearance\nR10 000\nSandton CBD (Rivonia Rd)\nR40 000\nAFROMOLY\nJOHANNESBURG EDITION\nRank pot: R0\nThe rank is open. Roll to begin.\nThabo offers a deal to Naledi.\nThe offer is turned down.\nThabo rolls 3 and 2.\nThabo moves to Bree Taxi Rank (Lilian Ngoyi).\nOPERATORS\n1\nThabo\n0 deeds · Bree Taxi Rank (Lilian Ngoyi)\nR150 000\nworth R150 000\n2\nNaledi\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\n3\nSipho\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\nYOUR MOVE\nBree Taxi Rank (Lilian Ngoyi) is unclaimed\nThabo may buy it for R20 000, or decline and send it to auction.\nBuy it\nDecline, send to auction\nTHABO\n\nNo deeds yet.\n\nTABLE\nSeed jozi-1788922415301\nJackpot rule on\nRestart\nLeave table",
+  "afterReload": "Afromoly\nJohannesburg Edition. Buy the corridors from Ferreirasdorp to Sandton CBD, run Quantum fleets out of the ranks, and squeeze every rival off the board.\nONE SCREEN\n\nTwo to six operators around the same device, passing it on each turn.\n\nPlay hot seat\nOWN SCREENS\nYOUR NAME\nHost a table\nOR JOIN WITH A CODE\nJoin",
+  "errors": [],
+  "initialRequests": [
+    "http://localhost:3100/",
+    "http://localhost:3100/_next/static/chunks/apps_web_app_globals_1lkgh9-.css",
+    "http://localhost:3100/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_0i6xlqn._.js",
+    "https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_compiled_next-devtools_index_1f8d5ne.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_compiled_react-dom_0xseiha._.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_compiled_react-server-dom-turbopack_1rwl2qq._.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_compiled_020nbpm._.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_client_13t250y._.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_1l7e_p2._.js",
+    "http://localhost:3100/_next/static/chunks/0zix_%40swc_helpers_cjs_0hi-e47._.js",
+    "http://localhost:3100/_next/static/chunks/apps_web_1anvha4._.js",
+    "http://localhost:3100/_next/static/chunks/turbopack-apps_web_0lr1y6t._.js",
+    "http://localhost:3100/_next/static/chunks/apps_web_219uq1s._.js",
+    "http://localhost:3100/_next/static/chunks/171a_next_dist_053jrvn._.js",
+    "http://localhost:3100/_next/static/chunks/_0boy27m._.js",
+    "http://localhost:3100/_next/static/chunks/0hqc_three_build_three_core_15pyy7s.js",
+    "http://localhost:3100/_next/static/chunks/0hqc_three_build_three_module_21b0uez.js",
+    "http://localhost:3100/_next/static/chunks/0hqc_three_build_three_module_1dkmpyc.js",
+    "http://localhost:3100/_next/static/chunks/1rvs_%40react-three_fiber_dist_1cede34._.js",
+    "http://localhost:3100/_next/static/chunks/07_-_three-stdlib_0308pv2._.js",
+    "http://localhost:3100/_next/static/chunks/1gl4_troika-three-text_dist_troika-three-text_esm_0fu6dvr.js",
+    "http://localhost:3100/_next/static/chunks/node_modules__pnpm_0b-_c38._.js",
+    "https://fonts.gstatic.com/s/archivo/v25/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxKsv4Rn.woff2",
+    "http://localhost:3100/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1mojsay._.js",
+    "http://localhost:3100/models/board.glb",
+    "http://localhost:3100/models/quantum-van.glb",
+    "http://localhost:3100/models/terminal-depot.glb",
+    "http://localhost:3100/models/token-quantum.glb",
+    "http://localhost:3100/models/token-coin.glb",
+    "http://localhost:3100/models/token-robot.glb",
+    "http://localhost:3100/models/token-vest.glb",
+    "http://localhost:3100/models/token-megaphone.glb",
+    "http://localhost:3100/models/token-sneaker.glb",
+    "http://localhost:3100/models/prop-robot.glb",
+    "http://localhost:3100/models/prop-bulb.glb",
+    "http://localhost:3100/models/prop-tap.glb",
+    "http://localhost:3100/models/prop-cards-kombi.glb",
+    "http://localhost:3100/models/prop-cards-citywatch.glb",
+    "http://localhost:3100/models/prop-coins.glb",
+    "http://localhost:3100/models/prop-gantry.glb",
+    "http://localhost:3100/models/die.glb",
+    "http://localhost:3100/models/diorama.glb",
+    "http://localhost:3100/config.json",
+    "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwgknk-4.woff2"
+  ]
+}

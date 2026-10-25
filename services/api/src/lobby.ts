@@ -1,7 +1,8 @@
 /** Creating, joining and starting a table. */
 
+import { timingSafeEqual } from 'node:crypto';
 import { TOKENS, createGame as createEngineGame, type TokenId } from '@afromoly/engine';
-import { makeCode, makeId, normaliseCode } from './codes.js';
+import { makeCode, makeId, makeSecret, normaliseCode } from './codes.js';
 import { fail, ok, type Result } from './result.js';
 import type { GameRecord, PlayerRecord, Store } from './store.js';
 
@@ -62,6 +63,7 @@ export async function createTable(
     name: cleanName(input.hostName, 'Operator 1'),
     token: TOKENS[0] as TokenId,
     seat: 0,
+    secret: makeSecret(),
     connectionId: null,
   };
   await store.createGame(game, host);
@@ -78,20 +80,47 @@ export async function joinTable(
   if (!game) return fail('UNKNOWN_GAME', 'No table with that code.');
   if (game.status !== 'lobby') return fail('ALREADY_STARTED', 'That game is already under way.');
 
-  const seats = await store.listPlayers(game.gameId);
-  if (seats.length >= MAX_SEATS) return fail('GAME_FULL', 'That table already seats six operators.');
+  // The seat number comes from a read, so two joins landing together can pick
+  // the same one. The conditional write catches that; the loser reads again.
+  for (let attempt = 0; attempt < MAX_SEATS; attempt++) {
+    const seats = await store.listPlayers(game.gameId);
+    if (seats.length >= MAX_SEATS) return fail('GAME_FULL', 'That table already seats six operators.');
 
-  const seat = seats.length;
-  const player: PlayerRecord = {
-    gameId: game.gameId,
-    playerId: `p${seat + 1}`,
-    name: cleanName(rawName, `Operator ${seat + 1}`),
-    token: (TOKENS[seat] ?? TOKENS[0]) as TokenId,
-    seat,
-    connectionId: null,
-  };
-  await store.addPlayer(player);
-  return ok({ game, player });
+    const seat = seats.length;
+    const player: PlayerRecord = {
+      gameId: game.gameId,
+      playerId: `p${seat + 1}`,
+      name: cleanName(rawName, `Operator ${seat + 1}`),
+      token: (TOKENS[seat] ?? TOKENS[0]) as TokenId,
+      seat,
+      secret: makeSecret(),
+      connectionId: null,
+    };
+    if (await store.addPlayer(player)) return ok({ game, player });
+  }
+  return fail('CONFLICT', 'The table is filling up. Try again.');
+}
+
+/** The seat, if the secret presented is the one issued for it. */
+export async function authenticateSeat(
+  store: Store,
+  gameId: string,
+  playerId: string,
+  secret: string,
+): Promise<Result<PlayerRecord>> {
+  const seats = await store.listPlayers(gameId);
+  const seat = seats.find((s) => s.playerId === playerId);
+  if (!seat) return fail('UNKNOWN_PLAYER', 'You are not seated at this table.');
+  if (!secret || !timingSafeEqualStrings(seat.secret, secret)) {
+    return fail('FORBIDDEN', 'That seat is not yours.');
+  }
+  return ok(seat);
+}
+
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 export async function startTable(

@@ -3,6 +3,8 @@ export interface Seat {
   code: string;
   playerId: string;
   name: string;
+  /** Proves this seat is ours. Sent only to the server, never shown. */
+  secret: string;
   /** Carried through so the socket knows where to connect. */
   wsUrl: string;
 }

@@ -14,10 +14,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { MemoryStore } from './memoryStore.js';
-import { createTable, joinTable } from './lobby.js';
+import { authenticateSeat, createTable, joinTable } from './lobby.js';
 import { handleClientMessage, handleDisconnect, lobbyMessage, pushTable } from './service.js';
 import type { Broadcaster } from './broadcast.js';
-import type { ClientMessage, ServerMessage } from '@afromoly/protocol';
+import { PROTOCOL_VERSION, type ClientMessage, type ServerMessage } from '@afromoly/protocol';
 
 const PORT = Number.parseInt(process.env.PORT ?? '4000', 10);
 const store = new MemoryStore();
@@ -79,6 +79,7 @@ const server = createServer((req, res) => {
         code: result.value.game.code,
         playerId: result.value.player.playerId,
         name: result.value.player.name,
+        secret: result.value.player.secret,
       });
     }
 
@@ -96,6 +97,7 @@ const server = createServer((req, res) => {
         code: result.value.game.code,
         playerId: result.value.player.playerId,
         name: result.value.player.name,
+        secret: result.value.player.secret,
       });
     }
 
@@ -118,13 +120,14 @@ wss.on('connection', (socket, req) => {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
     const gameId = url.searchParams.get('gameId');
     const playerId = url.searchParams.get('playerId');
+    const secret = url.searchParams.get('secret') ?? '';
     const connectionId = randomUUID();
     sockets.set(connectionId, socket);
 
     if (gameId && playerId) {
-      const seats = await store.listPlayers(gameId);
-      if (!seats.some((s) => s.playerId === playerId)) {
-        socket.close(4003, 'not seated at this table');
+      const seat = await authenticateSeat(store, gameId, playerId, secret);
+      if (!seat.ok) {
+        socket.close(4003, seat.message);
         sockets.delete(connectionId);
         return;
       }
@@ -139,7 +142,7 @@ wss.on('connection', (socket, req) => {
         try {
           parsed = JSON.parse(String(raw)) as ClientMessage;
         } catch {
-          socket.send(JSON.stringify({ v: 1, type: 'error', code: 'BAD_MESSAGE', message: 'Not valid JSON.' }));
+          socket.send(JSON.stringify({ v: PROTOCOL_VERSION, type: 'error', code: 'BAD_MESSAGE', message: 'Not valid JSON.' }));
           return;
         }
         const reply = await handleClientMessage(store, bus, connectionId, parsed);

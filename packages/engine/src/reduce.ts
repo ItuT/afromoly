@@ -218,7 +218,10 @@ function sendToImpound(ctx: Ctx, player: Player, reason: 'tile' | 'card' | 'thre
   player.inImpound = true;
   player.impoundAttempts = 0;
   ctx.state.doublesCount = 0;
+  // Rulebook 7: the turn ends immediately, even when the roll was doubles, so
+  // the phase is forced here rather than left to whatever the roll set up.
   ctx.state.turnResumePhase = 'awaitingEndTurn';
+  ctx.state.phase = 'awaitingEndTurn';
   ctx.events.push({ kind: 'sentToImpound', playerId: player.id, reason });
 }
 
@@ -600,6 +603,8 @@ function goBankrupt(ctx: Ctx, debtorId: PlayerId, creditorId: PlayerId | null): 
       ts.ownerId = null;
       ts.mortgaged = false;
     }
+    // The bank has no use for exit cards, so they go back into circulation.
+    for (const held of debtor.getOutCards) state.decks[held.deck].order.push(held.cardId);
     debtor.getOutCards = [];
     debtor.bankrupt = true;
     ctx.events.push({ kind: 'bankrupt', playerId: debtorId, creditorId: null });
@@ -859,14 +864,16 @@ export function reduce(state: GameState, action: Action): ReduceResult {
       if (level !== max) return reject('Sell evenly across the set');
 
       if (ts.depot) {
-        if (vansOwned(draft) + 4 > draft.options.maxVans) {
-          return reject('The bank cannot return four vans right now');
-        }
         // The four vans traded in for the depot come back onto the street, so
-        // only the depot's own cost is refunded, at half price.
+        // only the depot's own cost is refunded, at half price. When the bank
+        // cannot return four vans the whole development is sold at once for
+        // the same total, so a player in debt is never left without a move.
+        const vansAvailable = vansOwned(draft) + 4 <= draft.options.maxVans;
         ts.depot = false;
-        ts.vans = 4;
-        const refund = Math.floor(tile.buildCost / 2);
+        ts.vans = vansAvailable ? 4 : 0;
+        const refund = vansAvailable
+          ? Math.floor(tile.buildCost / 2)
+          : Math.floor((tile.buildCost * 5) / 2);
         addCash(ctx, actor.id, refund, 'depot sold');
         ctx.events.push({
           kind: 'buildingSold',
@@ -961,7 +968,10 @@ export function reduce(state: GameState, action: Action): ReduceResult {
       }
       executeTrade(ctx, offer);
       draft.trade = null;
-      draft.phase = draft.resumeAfterTrade ?? 'awaitingEndTurn';
+      // validateTrade guarantees both sides can pay the interest on any
+      // mortgaged deed they receive, so no debt should arise here; if one
+      // ever does, settlement must not be skipped over.
+      if (draft.debts.length === 0) draft.phase = draft.resumeAfterTrade ?? 'awaitingEndTurn';
       draft.resumeAfterTrade = null;
       ctx.events.push({ kind: 'tradeAccepted', offer });
       break;
@@ -1119,7 +1129,25 @@ function validateTrade(state: GameState, offer: TradeOffer, expectedFrom: Player
     }
     return null;
   };
-  return check(offer.fromTiles, offer.fromId, 'You') ?? check(offer.toTiles, offer.toId, 'They');
+  const ownership = check(offer.fromTiles, offer.fromId, 'You') ?? check(offer.toTiles, offer.toId, 'They');
+  if (ownership) return ownership;
+
+  // Rulebook 6B: whoever receives a mortgaged deed pays the bank ten percent
+  // at once. Both sides must be able to cover that out of the cash they hold
+  // after the deal's own cash has changed hands.
+  const interestOn = (tiles: TileIndex[]): number =>
+    tiles.reduce((sum, index) => {
+      const ts = state.tiles[index];
+      const tile = tileAt(index);
+      return ts?.mortgaged && 'mortgage' in tile ? sum + Math.ceil(tile.mortgage * MORTGAGE_INTEREST) : sum;
+    }, 0);
+  if (to.cash + offer.fromCash - offer.toCash < interestOn(offer.fromTiles)) {
+    return 'They cannot cover the interest on the mortgaged deeds you are offering';
+  }
+  if (from.cash - offer.fromCash + offer.toCash < interestOn(offer.toTiles)) {
+    return 'You cannot cover the interest on the mortgaged deeds you are asking for';
+  }
+  return null;
 }
 
 function executeTrade(ctx: Ctx, offer: TradeOffer): void {

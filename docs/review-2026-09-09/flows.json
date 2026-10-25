@@ -1,0 +1,17 @@
+{
+  "tradeBuilderWidth": {
+    "viewport": 451,
+    "width": 451
+  },
+  "guestTradeText": "Afromoly\nTABLE ZWCDAW · TURN 1 · OPEN\nFlat\n3D\nSound\nMONTH-END PAYDAY\n1\n2\nFerreirasdorp\nR6 000\nKombi Hustle\nMarshalltown\nR6 000\nSARS Road Tax\nR20 000 or 10%\nBree Taxi Rank (Lilian Ngoyi)\nR20 000\nDiepkloof\nR10 000\nCity Watch\nOrlando Towers\nR10 000\nVilakazi Street\nR12 000\nJMPD IMPOUND LOT\nNewtown Cultural Precinct\nR14 000\nCity Power\nR15 000\nBraamfontein (Juta St)\nR14 000\nMaboneng (Fox St)\nR16 000\nPark Station\nR20 000\nYeoville (Rockey St)\nR18 000\nKombi Hustle\nHillbrow\nR18 000\nJeppestown\nR20 000\nTAXI RANK QUEUE\nMelville (7th Street)\nR22 000\nCity Watch\nParkhurst (4th Avenue)\nR22 000\nRosebank (Oxford Rd)\nR24 000\nNoord Taxi Rank (MTN Rank)\nR20 000\nFourways (Winnie Mandela)\nR26 000\nMidrand (Allandale)\nR26 000\nJoburg Water\nR15 000\nWaterfall City\nR28 000\nGO TO IMPOUND\nHoughton Estate\nR30 000\nSaxonwold\nR30 000\nKombi Hustle\nHyde Park\nR32 000\nSandton Gautrain Station\nR20 000\nCity Watch\nAlice Lane\nR35 000\ne-Toll / Gantry Clearance\nR10 000\nSandton CBD (Rivonia Rd)\nR40 000\nAFROMOLY\nJOHANNESBURG EDITION\nRank pot: R0\nOPERATORS\n1\nReview Host\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\n2\nReview Guest\n0 deeds · Month-End Payday\nR150 000\nworth R150 000\nYOUR MOVE\nOffer on the table\nReview Guest must accept or decline.\nAccept the deal\nDecline\nAT THE RANK\nConnecting to the rank.\nReview Host offers a deal to Review Guest.\nREVIEW GUEST\n\nNo deeds yet.\n\nTABLE\nCode ZWCDAW\nYou are Review Guest\n2 of 2 connected\nLeave table",
+  "hostAfterRefresh": "Afromoly\nJohannesburg Edition. Buy the corridors from Ferreirasdorp to Sandton CBD, run Quantum fleets out of the ranks, and squeeze every rival off the board.\nONE SCREEN\n\nTwo to six operators around the same device, passing it on each turn.\n\nPlay hot seat\nOWN SCREENS\nYOUR NAME\nHost a table\nOR JOIN WITH A CODE\nJoin",
+  "rejoinError": "That game is already under way.",
+  "sixSeat": {
+    "viewport": 844,
+    "y": 919,
+    "height": 32
+  },
+  "buyText": "Newtown Cultural Precinct is unclaimed\nThabo may buy it for R14 000, or decline and send it to auction.",
+  "afterBuy": "Newtown Cultural Precinct\nCreative Corridors\nR14 000",
+  "afterRestart": ""
+}

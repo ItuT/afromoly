@@ -45,10 +45,12 @@ export class MemoryStore implements Store {
     return true;
   }
 
-  async addPlayer(player: PlayerRecord): Promise<void> {
+  async addPlayer(player: PlayerRecord): Promise<boolean> {
     const seats = this.players.get(player.gameId) ?? [];
+    if (seats.some((s) => s.playerId === player.playerId)) return false;
     seats.push(structuredClone(player));
     this.players.set(player.gameId, seats);
+    return true;
   }
 
   async listPlayers(gameId: string): Promise<PlayerRecord[]> {
